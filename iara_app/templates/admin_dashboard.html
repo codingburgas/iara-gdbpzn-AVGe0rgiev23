@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-3">Administrator Dashboard</h2>
+<p>Welcome, {{ current_user.first_name }}!</p>
+
+<div class="alert alert-primary">
+    You have full system access. From here you can manage users, inspectors, vessels, and system settings.
+</div>
+{% endblock %}

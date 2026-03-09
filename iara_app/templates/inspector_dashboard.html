@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-3">Inspector Dashboard</h2>
+<p>Welcome, {{ current_user.first_name }}!</p>
+
+<div class="alert alert-info">
+    Here you can manage inspections, field reports, and compliance checks.
+</div>
+{% endblock %}
