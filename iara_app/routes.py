@@ -95,3 +95,43 @@ def amateur_dashboard():
     if current_user.role != "amateur":
         abort(403)
     return render_template("amateur_dashboard.html")
+
+
+from .forms import VesselForm
+from .models import Vessel
+from . import db
+
+@bp.route("/admin/vessels/add", methods=["GET", "POST"])
+def add_vessel():
+    form = VesselForm()
+
+    if form.validate_on_submit():
+        vessel = Vessel(
+            international_number=form.international_number.data,
+            call_sign=form.call_sign.data,
+            marking=form.marking.data,
+            length=form.length.data,
+            width=form.width.data,
+            engine_power=form.engine_power.data,
+            owner_name=form.owner_name.data,
+            captain_name=form.captain_name.data
+        )
+
+        db.session.add(vessel)
+        db.session.commit()
+
+        return redirect("/admin/vessels")
+
+    return render_template("add_vessel.html", form=form, title="Add Vessel")
+
+
+@bp.route("/admin/vessels")
+def vessels():
+    all_vessels = Vessel.query.all()
+    return render_template("vessels.html", vessels=all_vessels, title="Vessel Registry")
+
+
+@bp.route("/admin/vessels/<int:vessel_id>")
+def vessel_details(vessel_id):
+    vessel = Vessel.query.get_or_404(vessel_id)
+    return render_template("vessel_details.html", vessel=vessel, title="Vessel Details")

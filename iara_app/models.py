@@ -41,3 +41,16 @@ class User(UserMixin, db.Model):
 
     def get_id(self):
         return str(self.id)
+
+
+class Vessel(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    international_number = db.Column(db.String(50), nullable=False)
+    call_sign = db.Column(db.String(50), nullable=False)
+    marking = db.Column(db.String(50), nullable=False)
+    length = db.Column(db.Integer, nullable=False)
+    width = db.Column(db.Integer, nullable=False)
+    engine_power = db.Column(db.Integer, nullable=False)
+    owner_name = db.Column(db.String(100), nullable=False)
+    captain_name = db.Column(db.String(100), nullable=False)
+
