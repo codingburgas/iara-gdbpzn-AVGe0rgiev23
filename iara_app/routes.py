@@ -168,6 +168,9 @@ def vessel_details(vessel_id):
 @bp.route("/admin/permits")
 @login_required
 def permits():
+    page = request.args.get("page", 1, type=int)
+    per_page = 10  # You can change this to 20, 50, etc.
+
     query = Permit.query
 
     # Filters
@@ -192,13 +195,18 @@ def permits():
     if date_to:
         query = query.filter(Permit.issue_date <= date_to)
 
-    permits = query.order_by(Permit.issue_date.desc()).all()
+    # Pagination
+    permits = query.order_by(Permit.issue_date.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
 
     # Auto-expire logic
     today = date.today()
     changed = False
 
-    for permit in permits:
+    for permit in permits.items:
         if permit.expiry_date < today and permit.status != "Expired":
             permit.status = "Expired"
             changed = True
@@ -214,6 +222,7 @@ def permits():
         vessels=vessels,
         title="Fishing Permits"
     )
+
 
 
 @bp.route("/admin/permits/<int:permit_id>")
