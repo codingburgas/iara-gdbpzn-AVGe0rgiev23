@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import date
 from wtforms import SubmitField
 from wtforms.validators import DataRequired
 from flask_wtf import FlaskForm
 from wtforms.fields import DateField
+from io import StringIO
+import csv
 
 from .models import User, Vessel, Permit
 from .forms import LoginForm, RegistrationForm, VesselForm, PermitForm
@@ -162,14 +164,14 @@ def vessel_details(vessel_id):
 
 
 # -------------------------
-# PERMITS
+# PERMITS LIST + FILTERS + PAGINATION
 # -------------------------
 
 @bp.route("/admin/permits")
 @login_required
 def permits():
     page = request.args.get("page", 1, type=int)
-    per_page = 10  # You can change this to 20, 50, etc.
+    per_page = 10
 
     query = Permit.query
 
@@ -224,19 +226,25 @@ def permits():
     )
 
 
+# -------------------------
+# PERMIT DETAILS
+# -------------------------
 
 @bp.route("/admin/permits/<int:permit_id>")
 @login_required
 def permit_details(permit_id):
     permit = Permit.query.get_or_404(permit_id)
 
-    # Auto-expire logic
     if permit.expiry_date < date.today() and permit.status != "Expired":
         permit.status = "Expired"
         db.session.commit()
 
     return render_template("permit_details.html", permit=permit, title="Permit Details")
 
+
+# -------------------------
+# ADD / EDIT / DELETE PERMIT
+# -------------------------
 
 @bp.route("/admin/permits/add", methods=["GET", "POST"])
 @login_required
@@ -355,3 +363,66 @@ def renew_permit(permit_id):
         return redirect(url_for("main.permit_details", permit_id=permit.id))
 
     return render_template("renew_permit.html", form=form, permit=permit, title="Renew Permit")
+
+
+# -------------------------
+# EXPORT TO CSV
+# -------------------------
+
+@bp.route("/admin/permits/export")
+@login_required
+def export_permits():
+    query = Permit.query
+
+    # Apply filters
+    status = request.args.get("status")
+    vessel_id = request.args.get("vessel_id")
+    permit_type = request.args.get("permit_type")
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
+
+    if status and status != "all":
+        query = query.filter_by(status=status)
+
+    if vessel_id and vessel_id != "all":
+        query = query.filter_by(vessel_id=int(vessel_id))
+
+    if permit_type and permit_type != "all":
+        query = query.filter_by(permit_type=permit_type)
+
+    if date_from:
+        query = query.filter(Permit.issue_date >= date_from)
+
+    if date_to:
+        query = query.filter(Permit.issue_date <= date_to)
+
+    permits = query.order_by(Permit.issue_date.desc()).all()
+
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Permit Number",
+        "Permit Type",
+        "Vessel Call Sign",
+        "Issue Date",
+        "Expiry Date",
+        "Status"
+    ])
+
+    for p in permits:
+        writer.writerow([
+            p.permit_number,
+            p.permit_type,
+            p.vessel.call_sign,
+            p.issue_date,
+            p.expiry_date,
+            p.status
+        ])
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=permits.csv"
+    response.headers["Content-Type"] = "text/csv"
+
+    return response
