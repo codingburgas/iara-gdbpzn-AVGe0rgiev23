@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Add Fishing Permit</h2>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        {{ form.permit_number.label(class="form-label") }}
+        {{ form.permit_number(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.permit_type.label(class="form-label") }}
+        {{ form.permit_type(class="form-select") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.vessel_id.label(class="form-label") }}
+        {{ form.vessel_id(class="form-select") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.issue_date.label(class="form-label") }}
+        {{ form.issue_date(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.expiry_date.label(class="form-label") }}
+        {{ form.expiry_date(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.status.label(class="form-label") }}
+        {{ form.status(class="form-select") }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create Permit</button>
+</form>
+
+{% endblock %}

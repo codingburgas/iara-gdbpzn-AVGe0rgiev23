@@ -1,17 +1,23 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User
+from .models import User, Vessel, Permit, PermitStatus
+from .forms import LoginForm, RegistrationForm, VesselForm, PermitForm
 from . import db
 
 bp = Blueprint("main", __name__)
+
+
+# -------------------------
+# AUTH
+# -------------------------
 
 @bp.route("/")
 def home():
     return redirect(url_for("main.login"))
 
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
-    from .forms import LoginForm
     form = LoginForm()
 
     if form.validate_on_submit():
@@ -34,6 +40,7 @@ def login():
 
     return render_template("login.html", form=form)
 
+
 @bp.route("/logout")
 @login_required
 def logout():
@@ -41,9 +48,9 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("main.login"))
 
+
 @bp.route("/register", methods=["GET", "POST"])
 def register():
-    from .forms import RegistrationForm
     form = RegistrationForm()
 
     if form.validate_on_submit():
@@ -68,12 +75,18 @@ def register():
 
     return render_template("register.html", form=form)
 
+
+# -------------------------
+# DASHBOARDS
+# -------------------------
+
 @bp.route("/admin/dashboard")
 @login_required
 def admin_dashboard():
     if current_user.role != "administrator":
         abort(403)
     return render_template("admin_dashboard.html")
+
 
 @bp.route("/inspector/dashboard")
 @login_required
@@ -82,12 +95,14 @@ def inspector_dashboard():
         abort(403)
     return render_template("inspector_dashboard.html")
 
+
 @bp.route("/fisherman/dashboard")
 @login_required
 def fisherman_dashboard():
     if current_user.role != "fisherman":
         abort(403)
     return render_template("fisherman_dashboard.html")
+
 
 @bp.route("/amateur/dashboard")
 @login_required
@@ -97,11 +112,12 @@ def amateur_dashboard():
     return render_template("amateur_dashboard.html")
 
 
-from .forms import VesselForm
-from .models import Vessel
-from . import db
+# -------------------------
+# VESSELS
+# -------------------------
 
 @bp.route("/admin/vessels/add", methods=["GET", "POST"])
+@login_required
 def add_vessel():
     form = VesselForm()
 
@@ -120,18 +136,56 @@ def add_vessel():
         db.session.add(vessel)
         db.session.commit()
 
-        return redirect("/admin/vessels")
+        return redirect(url_for("main.vessels"))
 
     return render_template("add_vessel.html", form=form, title="Add Vessel")
 
 
 @bp.route("/admin/vessels")
+@login_required
 def vessels():
     all_vessels = Vessel.query.all()
     return render_template("vessels.html", vessels=all_vessels, title="Vessel Registry")
 
 
 @bp.route("/admin/vessels/<int:vessel_id>")
+@login_required
 def vessel_details(vessel_id):
     vessel = Vessel.query.get_or_404(vessel_id)
     return render_template("vessel_details.html", vessel=vessel, title="Vessel Details")
+
+
+# -------------------------
+# PERMITS
+# -------------------------
+
+@bp.route("/admin/permits")
+@login_required
+def permits():
+    all_permits = Permit.query.order_by(Permit.issue_date.desc()).all()
+    return render_template("permits.html", permits=all_permits, title="Fishing Permits")
+
+
+@bp.route("/admin/permits/add", methods=["GET", "POST"])
+@login_required
+def add_permit():
+    form = PermitForm()
+    form.set_vessel_choices()
+
+    if form.validate_on_submit():
+        permit = Permit(
+            permit_number=form.permit_number.data,
+            permit_type=form.permit_type.data,
+            vessel_id=form.vessel_id.data,
+            issue_date=form.issue_date.data,
+            expiry_date=form.expiry_date.data,
+            status=form.status.data
+        )
+
+        db.session.add(permit)
+        db.session.commit()
+
+        flash("Permit created successfully!", "success")
+        return redirect(url_for("main.permits"))
+
+    return render_template("add_permit.html", form=form, title="Add Permit")

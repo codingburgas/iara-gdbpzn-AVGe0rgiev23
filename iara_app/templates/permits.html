@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Fishing Permits</h2>
+    <a href="{{ url_for('main.add_permit') }}" class="btn btn-primary">Add Permit</a>
+</div>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Permit #</th>
+            <th>Type</th>
+            <th>Vessel</th>
+            <th>Issue Date</th>
+            <th>Expiry Date</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for permit in permits %}
+        <tr>
+            <td>{{ permit.permit_number }}</td>
+            <td>{{ permit.permit_type }}</td>
+            <td>{{ permit.vessel.call_sign }}</td>
+            <td>{{ permit.issue_date }}</td>
+            <td>{{ permit.expiry_date }}</td>
+            <td>
+                {% if permit.status == "Active" %}
+                    <span class="badge bg-success">Active</span>
+                {% elif permit.status == "Expired" %}
+                    <span class="badge bg-danger">Expired</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Suspended</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
