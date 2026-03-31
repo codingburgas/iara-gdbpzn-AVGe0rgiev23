@@ -9,6 +9,7 @@
 
     <p><strong>Permit Number:</strong> {{ permit.permit_number }}</p>
     <p><strong>Permit Type:</strong> {{ permit.permit_type }}</p>
+
     <p><strong>Status:</strong>
         {% if permit.status == "Active" %}
             <span class="badge bg-success">Active</span>
@@ -30,7 +31,14 @@
     <p><strong>International Number:</strong> {{ permit.vessel.international_number }}</p>
     <p><strong>Owner:</strong> {{ permit.vessel.owner_name }}</p>
 
-    <a href="{{ url_for('main.permits') }}" class="btn btn-secondary mt-3">Back to Permits</a>
+    <div class="mt-4 d-flex gap-2">
+        <a href="{{ url_for('main.permits') }}" class="btn btn-secondary">Back to Permits</a>
+
+        <a href="{{ url_for('main.edit_permit', permit_id=permit.id) }}"
+           class="btn btn-warning">
+            Edit Permit
+        </a>
+    </div>
 
 </div>
 

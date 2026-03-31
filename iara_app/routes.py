@@ -227,3 +227,26 @@ def add_permit():
 def permit_details(permit_id):
     permit = Permit.query.get_or_404(permit_id)
     return render_template("permit_details.html", permit=permit, title="Permit Details")
+
+
+
+@bp.route("/admin/permits/<int:permit_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_permit(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+    form = PermitForm(obj=permit)
+    form.set_vessel_choices()
+
+    if form.validate_on_submit():
+        permit.permit_number = form.permit_number.data
+        permit.permit_type = form.permit_type.data
+        permit.vessel_id = form.vessel_id.data
+        permit.issue_date = form.issue_date.data
+        permit.expiry_date = form.expiry_date.data
+        permit.status = form.status.data
+
+        db.session.commit()
+        flash("Permit updated successfully!", "success")
+        return redirect(url_for("main.permit_details", permit_id=permit.id))
+
+    return render_template("edit_permit.html", form=form, permit=permit, title="Edit Permit")
