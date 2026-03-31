@@ -262,3 +262,33 @@ def delete_permit(permit_id):
 
     flash("Permit deleted successfully.", "info")
     return redirect(url_for("main.permits"))
+
+
+@bp.route("/admin/permits/<int:permit_id>/activate", methods=["POST"])
+@login_required
+def activate_permit(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+    permit.status = "Active"
+    db.session.commit()
+    flash("Permit activated.", "success")
+    return redirect(url_for("main.permit_details", permit_id=permit.id))
+
+
+@bp.route("/admin/permits/<int:permit_id>/suspend", methods=["POST"])
+@login_required
+def suspend_permit(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+    permit.status = "Suspended"
+    db.session.commit()
+    flash("Permit suspended.", "warning")
+    return redirect(url_for("main.permit_details", permit_id=permit.id))
+
+
+@bp.route("/admin/permits/<int:permit_id>/expire", methods=["POST"])
+@login_required
+def expire_permit(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+    permit.status = "Expired"
+    db.session.commit()
+    flash("Permit marked as expired.", "info")
+    return redirect(url_for("main.permit_details", permit_id=permit.id))
