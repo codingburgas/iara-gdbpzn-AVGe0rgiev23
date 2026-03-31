@@ -186,16 +186,28 @@ def permits():
     if date_to:
         query = query.filter(Permit.issue_date <= date_to)
 
-    all_permits = query.order_by(Permit.issue_date.desc()).all()
+    permits = query.order_by(Permit.issue_date.desc()).all()
+
+    # --- Auto-expire logic ---
+    today = date.today()
+    changed = False
+
+    for permit in permits:
+        if permit.expiry_date < today and permit.status != "Expired":
+            permit.status = "Expired"
+            changed = True
+
+    if changed:
+        db.session.commit()
+
     vessels = Vessel.query.all()
 
     return render_template(
         "permits.html",
-        permits=all_permits,
+        permits=permits,
         vessels=vessels,
         title="Fishing Permits"
     )
-
 
 @bp.route("/admin/permits/add", methods=["GET", "POST"])
 @login_required
