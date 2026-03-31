@@ -162,8 +162,39 @@ def vessel_details(vessel_id):
 @bp.route("/admin/permits")
 @login_required
 def permits():
-    all_permits = Permit.query.order_by(Permit.issue_date.desc()).all()
-    return render_template("permits.html", permits=all_permits, title="Fishing Permits")
+    query = Permit.query
+
+    # --- Filters ---
+    status = request.args.get("status")
+    vessel_id = request.args.get("vessel_id")
+    permit_type = request.args.get("permit_type")
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
+
+    if status and status != "all":
+        query = query.filter_by(status=status)
+
+    if vessel_id and vessel_id != "all":
+        query = query.filter_by(vessel_id=int(vessel_id))
+
+    if permit_type and permit_type != "all":
+        query = query.filter_by(permit_type=permit_type)
+
+    if date_from:
+        query = query.filter(Permit.issue_date >= date_from)
+
+    if date_to:
+        query = query.filter(Permit.issue_date <= date_to)
+
+    all_permits = query.order_by(Permit.issue_date.desc()).all()
+    vessels = Vessel.query.all()
+
+    return render_template(
+        "permits.html",
+        permits=all_permits,
+        vessels=vessels,
+        title="Fishing Permits"
+    )
 
 
 @bp.route("/admin/permits/add", methods=["GET", "POST"])
@@ -189,3 +220,10 @@ def add_permit():
         return redirect(url_for("main.permits"))
 
     return render_template("add_permit.html", form=form, title="Add Permit")
+
+
+@bp.route("/admin/permits/<int:permit_id>")
+@login_required
+def permit_details(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+    return render_template("permit_details.html", permit=permit, title="Permit Details")

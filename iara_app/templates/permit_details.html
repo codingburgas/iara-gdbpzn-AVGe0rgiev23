@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3 class="mb-4">Permit Details</h3>
+
+<div class="card p-4 shadow-sm">
+
+    <h5 class="mb-3">Permit Information</h5>
+
+    <p><strong>Permit Number:</strong> {{ permit.permit_number }}</p>
+    <p><strong>Permit Type:</strong> {{ permit.permit_type }}</p>
+    <p><strong>Status:</strong>
+        {% if permit.status == "Active" %}
+            <span class="badge bg-success">Active</span>
+        {% elif permit.status == "Expired" %}
+            <span class="badge bg-danger">Expired</span>
+        {% else %}
+            <span class="badge bg-warning text-dark">Suspended</span>
+        {% endif %}
+    </p>
+
+    <p><strong>Issue Date:</strong> {{ permit.issue_date }}</p>
+    <p><strong>Expiry Date:</strong> {{ permit.expiry_date }}</p>
+
+    <hr>
+
+    <h5 class="mb-3">Vessel Information</h5>
+
+    <p><strong>Call Sign:</strong> {{ permit.vessel.call_sign }}</p>
+    <p><strong>International Number:</strong> {{ permit.vessel.international_number }}</p>
+    <p><strong>Owner:</strong> {{ permit.vessel.owner_name }}</p>
+
+    <a href="{{ url_for('main.permits') }}" class="btn btn-secondary mt-3">Back to Permits</a>
+
+</div>
+
+{% endblock %}
