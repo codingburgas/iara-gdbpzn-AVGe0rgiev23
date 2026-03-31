@@ -54,3 +54,33 @@ class Vessel(db.Model):
     owner_name = db.Column(db.String(100), nullable=False)
     captain_name = db.Column(db.String(100), nullable=False)
 
+
+from . import db
+from datetime import date
+from enum import Enum
+
+
+class PermitStatus(Enum):
+    ACTIVE = "Active"
+    EXPIRED = "Expired"
+    SUSPENDED = "Suspended"
+
+
+class Permit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Relationship to Vessel
+    vessel_id = db.Column(db.Integer, db.ForeignKey('vessel.id'), nullable=False)
+    vessel = db.relationship('Vessel', backref=db.backref('permits', lazy=True))
+
+    permit_number = db.Column(db.String(50), nullable=False, unique=True)
+    permit_type = db.Column(db.String(50), nullable=False)
+
+    issue_date = db.Column(db.Date, nullable=False)
+    expiry_date = db.Column(db.Date, nullable=False)
+
+    status = db.Column(db.String(20), nullable=False, default=PermitStatus.ACTIVE.value)
+
+    def is_expired(self):
+        return date.today() > self.expiry_date
+
