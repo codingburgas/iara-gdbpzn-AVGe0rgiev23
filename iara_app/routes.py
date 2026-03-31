@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, make_response
 from flask_login import login_user, logout_user, login_required, current_user
-from datetime import date
+from datetime import date, timedelta
 from wtforms import SubmitField
 from wtforms.validators import DataRequired
 from flask_wtf import FlaskForm
@@ -93,7 +93,32 @@ def register():
 def admin_dashboard():
     if current_user.role != "administrator":
         abort(403)
-    return render_template("admin_dashboard.html")
+
+    today = date.today()
+    next_month = today.replace(day=today.day)  # safe copy
+
+    # Stats
+    total_permits = Permit.query.count()
+    active_permits = Permit.query.filter_by(status="Active").count()
+    expired_permits = Permit.query.filter_by(status="Expired").count()
+    suspended_permits = Permit.query.filter_by(status="Suspended").count()
+
+    # Expiring soon (next 30 days)
+    expiring_soon = Permit.query.filter(
+        Permit.expiry_date >= today,
+        Permit.expiry_date <= today.replace(day=today.day) + timedelta(days=30)
+    ).count()
+
+    return render_template(
+        "admin_dashboard.html",
+        total_permits=total_permits,
+        active_permits=active_permits,
+        expired_permits=expired_permits,
+        suspended_permits=suspended_permits,
+        expiring_soon=expiring_soon,
+        title="Admin Dashboard"
+    )
+
 
 
 @bp.route("/inspector/dashboard")
