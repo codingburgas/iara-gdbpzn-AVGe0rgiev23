@@ -250,3 +250,15 @@ def edit_permit(permit_id):
         return redirect(url_for("main.permit_details", permit_id=permit.id))
 
     return render_template("edit_permit.html", form=form, permit=permit, title="Edit Permit")
+
+
+@bp.route("/admin/permits/<int:permit_id>/delete", methods=["POST"])
+@login_required
+def delete_permit(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+
+    db.session.delete(permit)
+    db.session.commit()
+
+    flash("Permit deleted successfully.", "info")
+    return redirect(url_for("main.permits"))
