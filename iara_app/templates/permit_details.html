@@ -33,39 +33,49 @@
 
     <div class="mt-4 d-flex gap-2">
 
-    <a href="{{ url_for('main.permits') }}" class="btn btn-secondary">Back to Permits</a>
+        <!-- Back -->
+        <a href="{{ url_for('main.permits') }}" class="btn btn-secondary">Back to Permits</a>
 
-    <a href="{{ url_for('main.edit_permit', permit_id=permit.id) }}"
-       class="btn btn-warning">
-        Edit Permit
-    </a>
+        <!-- Edit -->
+        <a href="{{ url_for('main.edit_permit', permit_id=permit.id) }}"
+           class="btn btn-warning">
+            Edit Permit
+        </a>
 
-    <form action="{{ url_for('main.delete_permit', permit_id=permit.id) }}"
-          method="POST"
-          onsubmit="return confirm('Are you sure you want to delete this permit?');">
-        <button class="btn btn-danger">Delete</button>
-    </form>
+        <!-- Delete -->
+        <form action="{{ url_for('main.delete_permit', permit_id=permit.id) }}"
+              method="POST"
+              onsubmit="return confirm('Are you sure you want to delete this permit?');">
+            <button class="btn btn-danger">Delete</button>
+        </form>
 
-    {% if permit.status != "Active" %}
-    <form action="{{ url_for('main.activate_permit', permit_id=permit.id) }}" method="POST">
-        <button class="btn btn-success">Activate</button>
-    </form>
-    {% endif %}
+        <!-- Activate -->
+        {% if permit.status != "Active" %}
+        <form action="{{ url_for('main.activate_permit', permit_id=permit.id) }}" method="POST">
+            <button class="btn btn-success">Activate</button>
+        </form>
+        {% endif %}
 
-    {% if permit.status != "Suspended" %}
-    <form action="{{ url_for('main.suspend_permit', permit_id=permit.id) }}" method="POST">
-        <button class="btn btn-outline-warning">Suspend</button>
-    </form>
-    {% endif %}
+        <!-- Suspend -->
+        {% if permit.status != "Suspended" %}
+        <form action="{{ url_for('main.suspend_permit', permit_id=permit.id) }}" method="POST">
+            <button class="btn btn-outline-warning">Suspend</button>
+        </form>
+        {% endif %}
 
-    {% if permit.status != "Expired" %}
-    <form action="{{ url_for('main.expire_permit', permit_id=permit.id) }}" method="POST">
-        <button class="btn btn-outline-secondary">Mark Expired</button>
-    </form>
-    {% endif %}
+        <!-- Mark Expired -->
+        {% if permit.status != "Expired" %}
+        <form action="{{ url_for('main.expire_permit', permit_id=permit.id) }}" method="POST">
+            <button class="btn btn-outline-secondary">Mark Expired</button>
+        </form>
+        {% endif %}
 
-</div>
+        <!-- Renew Permit -->
+        <form action="{{ url_for('main.renew_permit', permit_id=permit.id) }}" method="GET">
+            <button class="btn btn-info">Renew Permit</button>
+        </form>
 
+    </div>
 
 </div>
 

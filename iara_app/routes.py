@@ -292,3 +292,26 @@ def expire_permit(permit_id):
     db.session.commit()
     flash("Permit marked as expired.", "info")
     return redirect(url_for("main.permit_details", permit_id=permit.id))
+
+
+@bp.route("/admin/permits/<int:permit_id>/renew", methods=["GET", "POST"])
+@login_required
+def renew_permit(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+
+    # Pre-fill form with current expiry date
+    class RenewalForm(FlaskForm):
+        new_expiry_date = DateField("New Expiry Date", validators=[DataRequired()])
+        submit = SubmitField("Renew Permit")
+
+    form = RenewalForm(new_expiry_date=permit.expiry_date)
+
+    if form.validate_on_submit():
+        permit.expiry_date = form.new_expiry_date.data
+        permit.status = "Active"  # optional but recommended
+        db.session.commit()
+
+        flash("Permit renewed successfully.", "success")
+        return redirect(url_for("main.permit_details", permit_id=permit.id))
+
+    return render_template("renew_permit.html", form=form, permit=permit, title="Renew Permit")
