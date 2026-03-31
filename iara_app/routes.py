@@ -1,6 +1,12 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Vessel, Permit, PermitStatus
+from datetime import date
+from wtforms import SubmitField
+from wtforms.validators import DataRequired
+from flask_wtf import FlaskForm
+from wtforms.fields import DateField
+
+from .models import User, Vessel, Permit
 from .forms import LoginForm, RegistrationForm, VesselForm, PermitForm
 from . import db
 
@@ -164,7 +170,7 @@ def vessel_details(vessel_id):
 def permits():
     query = Permit.query
 
-    # --- Filters ---
+    # Filters
     status = request.args.get("status")
     vessel_id = request.args.get("vessel_id")
     permit_type = request.args.get("permit_type")
@@ -188,7 +194,7 @@ def permits():
 
     permits = query.order_by(Permit.issue_date.desc()).all()
 
-    # --- Auto-expire logic ---
+    # Auto-expire logic
     today = date.today()
     changed = False
 
@@ -208,6 +214,20 @@ def permits():
         vessels=vessels,
         title="Fishing Permits"
     )
+
+
+@bp.route("/admin/permits/<int:permit_id>")
+@login_required
+def permit_details(permit_id):
+    permit = Permit.query.get_or_404(permit_id)
+
+    # Auto-expire logic
+    if permit.expiry_date < date.today() and permit.status != "Expired":
+        permit.status = "Expired"
+        db.session.commit()
+
+    return render_template("permit_details.html", permit=permit, title="Permit Details")
+
 
 @bp.route("/admin/permits/add", methods=["GET", "POST"])
 @login_required
@@ -232,14 +252,6 @@ def add_permit():
         return redirect(url_for("main.permits"))
 
     return render_template("add_permit.html", form=form, title="Add Permit")
-
-
-@bp.route("/admin/permits/<int:permit_id>")
-@login_required
-def permit_details(permit_id):
-    permit = Permit.query.get_or_404(permit_id)
-    return render_template("permit_details.html", permit=permit, title="Permit Details")
-
 
 
 @bp.route("/admin/permits/<int:permit_id>/edit", methods=["GET", "POST"])
@@ -276,6 +288,10 @@ def delete_permit(permit_id):
     return redirect(url_for("main.permits"))
 
 
+# -------------------------
+# PERMIT STATUS ACTIONS
+# -------------------------
+
 @bp.route("/admin/permits/<int:permit_id>/activate", methods=["POST"])
 @login_required
 def activate_permit(permit_id):
@@ -306,12 +322,15 @@ def expire_permit(permit_id):
     return redirect(url_for("main.permit_details", permit_id=permit.id))
 
 
+# -------------------------
+# PERMIT RENEWAL
+# -------------------------
+
 @bp.route("/admin/permits/<int:permit_id>/renew", methods=["GET", "POST"])
 @login_required
 def renew_permit(permit_id):
     permit = Permit.query.get_or_404(permit_id)
 
-    # Pre-fill form with current expiry date
     class RenewalForm(FlaskForm):
         new_expiry_date = DateField("New Expiry Date", validators=[DataRequired()])
         submit = SubmitField("Renew Permit")
@@ -320,7 +339,7 @@ def renew_permit(permit_id):
 
     if form.validate_on_submit():
         permit.expiry_date = form.new_expiry_date.data
-        permit.status = "Active"  # optional but recommended
+        permit.status = "Active"
         db.session.commit()
 
         flash("Permit renewed successfully.", "success")
