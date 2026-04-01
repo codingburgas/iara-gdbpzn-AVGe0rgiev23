@@ -1,8 +1,31 @@
-from datetime import datetime
-from flask_login import UserMixin
-from . import db
+from datetime import datetime, date
+from enum import Enum
 import bcrypt
 
+from flask_login import UserMixin
+from . import db
+
+
+# ============================================================
+# ENUMS
+# ============================================================
+
+class PermitStatus(Enum):
+    ACTIVE = "Active"
+    EXPIRED = "Expired"
+    SUSPENDED = "Suspended"
+
+
+class ViolationSeverity(Enum):
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    CRITICAL = "Critical"
+
+
+# ============================================================
+# USER MODEL
+# ============================================================
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
@@ -14,7 +37,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=False)
 
-    role = db.Column(db.String(50), nullable=False)
+    role = db.Column(db.String(50), nullable=False)  # admin, inspector, operator
 
     password_hash = db.Column(db.String(128), nullable=False)
 
@@ -29,6 +52,9 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
 
+    # Relationship: Inspector → Inspections
+    inspections = db.relationship("Inspection", backref="inspector", lazy=True)
+
     def set_password(self, password):
         self.password_hash = bcrypt.hashpw(
             password.encode("utf-8"), bcrypt.gensalt()
@@ -42,8 +68,17 @@ class User(UserMixin, db.Model):
     def get_id(self):
         return str(self.id)
 
+    def __repr__(self):
+        return f"<User {self.email} ({self.role})>"
+
+
+# ============================================================
+# VESSEL MODEL
+# ============================================================
 
 class Vessel(db.Model):
+    __tablename__ = "vessel"
+
     id = db.Column(db.Integer, primary_key=True)
     international_number = db.Column(db.String(50), nullable=False)
     call_sign = db.Column(db.String(50), nullable=False)
@@ -54,24 +89,26 @@ class Vessel(db.Model):
     owner_name = db.Column(db.String(100), nullable=False)
     captain_name = db.Column(db.String(100), nullable=False)
 
+    # Vessel → Permits
+    permits = db.relationship("Permit", backref="vessel", lazy=True)
 
-from . import db
-from datetime import date
-from enum import Enum
+    # Vessel → Inspections
+    inspections = db.relationship("Inspection", backref="vessel", lazy=True)
+
+    def __repr__(self):
+        return f"<Vessel {self.call_sign}>"
 
 
-class PermitStatus(Enum):
-    ACTIVE = "Active"
-    EXPIRED = "Expired"
-    SUSPENDED = "Suspended"
-
+# ============================================================
+# PERMIT MODEL
+# ============================================================
 
 class Permit(db.Model):
+    __tablename__ = "permit"
+
     id = db.Column(db.Integer, primary_key=True)
 
-    # Relationship to Vessel
-    vessel_id = db.Column(db.Integer, db.ForeignKey('vessel.id'), nullable=False)
-    vessel = db.relationship('Vessel', backref=db.backref('permits', lazy=True))
+    vessel_id = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
 
     permit_number = db.Column(db.String(50), nullable=False, unique=True)
     permit_type = db.Column(db.String(50), nullable=False)
@@ -84,3 +121,128 @@ class Permit(db.Model):
     def is_expired(self):
         return date.today() > self.expiry_date
 
+    def __repr__(self):
+        return f"<Permit {self.permit_number} ({self.status})>"
+
+
+# ============================================================
+# VIOLATION CATEGORY
+# ============================================================
+
+class ViolationCategory(db.Model):
+    __tablename__ = "violation_categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
+    codes = db.relationship("ViolationCode", backref="category", lazy=True)
+
+    def __repr__(self):
+        return f"<ViolationCategory {self.name}>"
+
+
+# ============================================================
+# VIOLATION CODE
+# ============================================================
+
+class ViolationCode(db.Model):
+    __tablename__ = "violation_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), unique=True, nullable=False)  # e.g. V-001
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    category_id = db.Column(db.Integer, db.ForeignKey("violation_categories.id"), nullable=False)
+    default_severity = db.Column(db.String(20), nullable=False, default=ViolationSeverity.MEDIUM.value)
+
+    violations = db.relationship("Violation", backref="violation_code", lazy=True)
+
+    def __repr__(self):
+        return f"<ViolationCode {self.code}>"
+
+
+# ============================================================
+# INSPECTION
+# ============================================================
+
+def generate_inspection_id():
+    now = datetime.utcnow()
+    return f"INSP-{now.year}-{int(now.timestamp())}"
+
+
+class Inspection(db.Model):
+    __tablename__ = "inspections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    inspection_id = db.Column(db.String(50), unique=True, nullable=False, default=generate_inspection_id)
+
+    vessel_id = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
+    inspector_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    date = db.Column(db.Date, nullable=False, default=date.today)
+    location = db.Column(db.String(255), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    permit_status_snapshot = db.Column(db.String(50), nullable=True)
+    score = db.Column(db.Integer, nullable=False, default=100)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    violations = db.relationship(
+        "Violation",
+        backref="inspection",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<Inspection {self.inspection_id}>"
+
+
+# ============================================================
+# VIOLATION
+# ============================================================
+
+class Violation(db.Model):
+    __tablename__ = "violations"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    inspection_id = db.Column(db.Integer, db.ForeignKey("inspections.id"), nullable=False)
+    violation_code_id = db.Column(db.Integer, db.ForeignKey("violation_codes.id"), nullable=True)
+
+    severity = db.Column(db.String(20), nullable=False, default=ViolationSeverity.MEDIUM.value)
+    description = db.Column(db.Text, nullable=True)
+    fine_amount = db.Column(db.Numeric(10, 2), nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    evidence = db.relationship(
+        "Evidence",
+        backref="violation",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<Violation {self.id}>"
+
+
+# ============================================================
+# EVIDENCE
+# ============================================================
+
+class Evidence(db.Model):
+    __tablename__ = "evidence"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    violation_id = db.Column(db.Integer, db.ForeignKey("violations.id"), nullable=False)
+    file_path = db.Column(db.String(255), nullable=True)
+    note = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Evidence {self.id}>"
