@@ -37,16 +37,12 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=False)
 
-    # Roles: administrator, inspector, fisherman, amateur
     role = db.Column(db.String(50), nullable=False)
-
     password_hash = db.Column(db.String(128), nullable=False)
 
-    # Optional fields for fishermen / amateurs
     vessel_registration = db.Column(db.String(50))
     fishing_permit_number = db.Column(db.String(50))
 
-    # Optional external inspector identifier (badge, internal ID, etc.)
     inspector_id = db.Column(db.String(50))
 
     id_number = db.Column(db.String(50))
@@ -55,7 +51,6 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
 
-    # Relationship: Inspector → Inspections
     inspections = db.relationship("Inspection", backref="inspector", lazy=True)
 
     def set_password(self, password: str) -> None:
@@ -92,10 +87,7 @@ class Vessel(db.Model):
     owner_name = db.Column(db.String(100), nullable=False)
     captain_name = db.Column(db.String(100), nullable=False)
 
-    # Vessel → Permits
     permits = db.relationship("Permit", backref="vessel", lazy=True)
-
-    # Vessel → Inspections
     inspections = db.relationship("Inspection", backref="vessel", lazy=True)
 
     def __repr__(self) -> str:
@@ -156,15 +148,16 @@ class ViolationCode(db.Model):
     __tablename__ = "violation_codes"
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(20), unique=True, nullable=False)  # e.g. V-001
+    code = db.Column(db.String(20), unique=True, nullable=False)
     title = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.Text, nullable=True)
+    description = db.Column(db.Text)
 
     category_id = db.Column(
         db.Integer,
         db.ForeignKey("violation_categories.id"),
         nullable=False
     )
+
     default_severity = db.Column(
         db.String(20),
         nullable=False,
@@ -181,20 +174,23 @@ class ViolationCode(db.Model):
 # INSPECTION
 # ============================================================
 
-def generate_inspection_id() -> str:
-    now = datetime.utcnow()
-    return f"INSP-{now.year}-{int(now.timestamp())}"
-
-
 class Inspection(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    vessel_id = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
-    inspector_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __tablename__ = "inspection"
 
-    # NEW FIELDS
-    status = db.Column(db.String(20), default="draft")
+    id = db.Column(db.Integer, primary_key=True)
+
+    vessel_id = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
+    inspector_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    date = db.Column(db.Date)
+    location = db.Column(db.String(255))
+    notes = db.Column(db.Text)
+
+    permit_status_snapshot = db.Column(db.String(50))
+
+    score = db.Column(db.Integer, default=100)
     final_score = db.Column(db.Integer)
+    status = db.Column(db.String(20), default="draft")
     inspector_signature = db.Column(db.String(255))
     submitted_at = db.Column(db.DateTime)
     approved_at = db.Column(db.DateTime)
@@ -208,21 +204,30 @@ class Inspection(db.Model):
 # ============================================================
 
 class Violation(db.Model):
+    __tablename__ = "violation"
+
     id = db.Column(db.Integer, primary_key=True)
-    inspection_id = db.Column(db.Integer, db.ForeignKey("inspection.id"), nullable=False)
-    violation_code_id = db.Column(db.Integer, db.ForeignKey("violation_code.id"))
+
+    inspection_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inspection.id"),
+        nullable=False
+    )
+
+    violation_code_id = db.Column(
+        db.Integer,
+        db.ForeignKey("violation_codes.id")
+    )
+
     severity = db.Column(db.String(20))
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # NEW FIELDS FOR RESOLUTION WORKFLOW
     status = db.Column(db.String(20), default="open")
     resolution_notes = db.Column(db.Text)
     resolved_at = db.Column(db.DateTime)
 
-    # Relationship
     evidence = db.relationship("Evidence", backref="violation", lazy=True)
-
 
 
 # ============================================================
@@ -236,13 +241,14 @@ class Evidence(db.Model):
 
     violation_id = db.Column(
         db.Integer,
-        db.ForeignKey("violations.id"),
+        db.ForeignKey("violation.id"),
         nullable=False
     )
-    file_path = db.Column(db.String(255), nullable=True)
-    note = db.Column(db.Text, nullable=True)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    file_path = db.Column(db.String(255))
+    note = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self) -> str:
         return f"<Evidence {self.id}>"

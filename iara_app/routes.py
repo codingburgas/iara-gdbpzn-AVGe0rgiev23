@@ -155,7 +155,53 @@ def admin_dashboard():
 def inspector_dashboard():
     if current_user.role != "inspector":
         abort(403)
-    return render_template("inspector_dashboard.html")
+
+    today = date.today()
+
+    # Today's inspections
+    todays_inspections = Inspection.query.filter_by(
+        inspector_id=current_user.id,
+        date=today
+    ).order_by(Inspection.date.desc()).all()
+
+    # Violations needing resolution
+    pending_resolution = Violation.query.join(Inspection).filter(
+        Inspection.inspector_id == current_user.id,
+        Violation.status == "open"
+    ).all()
+
+    # Violations marked as corrected but not reviewed
+    corrected_waiting = Violation.query.join(Inspection).filter(
+        Inspection.inspector_id == current_user.id,
+        Violation.status == "corrected"
+    ).all()
+
+    # Evidence reminders (violations with no evidence)
+    violations_no_evidence = Violation.query.join(Inspection).filter(
+        Inspection.inspector_id == current_user.id
+    ).all()
+
+    violations_missing_evidence = [
+        v for v in violations_no_evidence if len(v.evidence) == 0
+    ]
+
+    # Score trend (last 10 inspections)
+    recent_inspections = Inspection.query.filter_by(
+        inspector_id=current_user.id
+    ).order_by(Inspection.date.desc()).limit(10).all()
+
+    score_trend = [insp.final_score for insp in recent_inspections if insp.final_score is not None]
+
+    return render_template(
+        "inspector_dashboard.html",
+        todays_inspections=todays_inspections,
+        pending_resolution=pending_resolution,
+        corrected_waiting=corrected_waiting,
+        violations_missing_evidence=violations_missing_evidence,
+        score_trend=score_trend,
+        recent_inspections=recent_inspections
+    )
+
 
 
 @bp.route("/fisherman/dashboard")

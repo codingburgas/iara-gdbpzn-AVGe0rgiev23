@@ -1,10 +1,124 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2 class="mb-3">Inspector Dashboard</h2>
-<p>Welcome, {{ current_user.first_name }}!</p>
+<h2>Inspector Dashboard</h2>
 
-<div class="alert alert-info">
-    Here you can manage inspections, field reports, and compliance checks.
+<div class="row">
+
+    <!-- Today's Inspections -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                Today's Inspections
+            </div>
+            <div class="card-body">
+                {% if todays_inspections %}
+                    <ul class="list-group">
+                        {% for insp in todays_inspections %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ insp.vessel.name }} — {{ insp.location }}
+                            <a href="{{ url_for('main.inspection_details', inspection_id=insp.id) }}"
+                               class="btn btn-sm btn-outline-primary">Open</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No inspections scheduled for today.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Violations -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                Violations Needing Resolution
+            </div>
+            <div class="card-body">
+                {% if pending_resolution %}
+                    <ul class="list-group">
+                        {% for v in pending_resolution %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ v.description }}
+                            <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                               class="btn btn-sm btn-outline-danger">Resolve</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No unresolved violations.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<div class="row">
+
+    <!-- Corrected but waiting review -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                Corrected Violations (Pending Review)
+            </div>
+            <div class="card-body">
+                {% if corrected_waiting %}
+                    <ul class="list-group">
+                        {% for v in corrected_waiting %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ v.description }}
+                            <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                               class="btn btn-sm btn-outline-warning">View</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No corrected violations awaiting review.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Evidence reminders -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-dark">
+                Violations Missing Evidence
+            </div>
+            <div class="card-body">
+                {% if violations_missing_evidence %}
+                    <ul class="list-group">
+                        {% for v in violations_missing_evidence %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ v.description }}
+                            <a href="{{ url_for('main.upload_evidence', violation_id=v.id) }}"
+                               class="btn btn-sm btn-outline-info">Add Evidence</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">All violations have evidence.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Score Trend -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-secondary text-white">
+        Score Trend (Last 10 Inspections)
+    </div>
+    <div class="card-body">
+        {% if score_trend %}
+            <p>Scores: {{ score_trend }}</p>
+        {% else %}
+            <p class="text-muted">No completed inspections yet.</p>
+        {% endif %}
+    </div>
+</div>
+
 {% endblock %}
