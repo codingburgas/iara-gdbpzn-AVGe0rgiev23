@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Inspection History for {{ vessel.name }}</h2>
+
+<a href="{{ url_for('main.vessel_details', vessel_id=vessel.id) }}"
+   class="btn btn-secondary mb-3">Back to Vessel</a>
+
+{% if history %}
+<table class="table table-bordered align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Date</th>
+            <th>Inspector</th>
+            <th>Violations</th>
+            <th>Severity Breakdown</th>
+            <th>Evidence</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for item in history %}
+        <tr>
+            <td>{{ item.inspection.date }}</td>
+            <td>{{ item.inspection.inspector.first_name }} {{ item.inspection.inspector.last_name }}</td>
+
+            <td>
+                <span class="badge bg-primary">{{ item.total_violations }}</span>
+            </td>
+
+            <td>
+                {% if item.severity_counts.Low %}
+                    <span class="badge bg-success">Low: {{ item.severity_counts.Low }}</span>
+                {% endif %}
+                {% if item.severity_counts.Medium %}
+                    <span class="badge bg-warning text-dark">Medium: {{ item.severity_counts.Medium }}</span>
+                {% endif %}
+                {% if item.severity_counts.High %}
+                    <span class="badge bg-danger">High: {{ item.severity_counts.High }}</span>
+                {% endif %}
+                {% if item.severity_counts.Critical %}
+                    <span class="badge bg-dark">Critical: {{ item.severity_counts.Critical }}</span>
+                {% endif %}
+            </td>
+
+            <td>
+                <span class="badge bg-info text-dark">{{ item.evidence_count }}</span>
+            </td>
+
+            <td>
+                <a href="{{ url_for('main.inspection_details', inspection_id=item.inspection.id) }}"
+                   class="btn btn-sm btn-outline-primary">View</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% else %}
+<p class="text-muted">No inspections found for this vessel.</p>
+{% endif %}
+
+{% endblock %}

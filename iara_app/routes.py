@@ -817,3 +817,45 @@ def finalize_inspection(inspection_id):
         return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
 
     return render_template("inspections/finalize.html", inspection=inspection)
+
+
+@bp.route("/admin/vessels/<int:vessel_id>/inspections")
+@login_required
+def vessel_inspection_history(vessel_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    vessel = Vessel.query.get_or_404(vessel_id)
+
+    inspections = Inspection.query.filter_by(
+        vessel_id=vessel.id
+    ).order_by(Inspection.date.desc()).all()
+
+    # Build summaries
+    history = []
+    for insp in inspections:
+        total_violations = len(insp.violations)
+        severity_counts = {
+            "Low": 0,
+            "Medium": 0,
+            "High": 0,
+            "Critical": 0
+        }
+        evidence_count = 0
+
+        for v in insp.violations:
+            severity_counts[v.severity] += 1
+            evidence_count += len(v.evidence)
+
+        history.append({
+            "inspection": insp,
+            "total_violations": total_violations,
+            "severity_counts": severity_counts,
+            "evidence_count": evidence_count
+        })
+
+    return render_template(
+        "vessels/inspection_history.html",
+        vessel=vessel,
+        history=history
+    )
