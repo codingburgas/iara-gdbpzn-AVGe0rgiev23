@@ -1,0 +1,33 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<h2>All Inspections</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Vessel</th>
+            <th>Inspector</th>
+            <th>Score</th>
+            <th>Override</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for insp in inspections %}
+        <tr>
+            <td>{{ insp.date }}</td>
+            <td>{{ insp.vessel.call_sign }}</td>
+            <td>{{ insp.inspector.first_name }} {{ insp.inspector.last_name }}</td>
+            <td>{{ insp.final_score or insp.score }}</td>
+            <td>
+                <form method="POST"
+                      action="{{ url_for('main.admin_override_score', inspection_id=insp.id) }}">
+                    <input type="number" name="new_score" min="0" max="100" class="form-control mb-1">
+                    <button class="btn btn-sm btn-primary">Apply</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

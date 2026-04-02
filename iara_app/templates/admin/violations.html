@@ -1,0 +1,48 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<h2>All Violations</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Inspection</th>
+            <th>Code</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Evidence</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in violations %}
+        <tr>
+            <td>{{ v.inspection.id }}</td>
+            <td>{{ v.violation_code.code }}</td>
+            <td>{{ v.description }}</td>
+            <td>{{ v.status }}</td>
+            <td>
+                <a href="{{ url_for('main.admin_view_evidence', violation_id=v.id) }}"
+                   class="btn btn-sm btn-info">View</a>
+            </td>
+            <td>
+                {% if v.status == "corrected" %}
+                <form method="POST"
+                      action="{{ url_for('main.admin_approve_violation', violation_id=v.id) }}"
+                      style="display:inline;">
+                    <button class="btn btn-success btn-sm">Approve</button>
+                </form>
+
+                <form method="POST"
+                      action="{{ url_for('main.admin_reject_violation', violation_id=v.id) }}"
+                      style="display:inline;">
+                    <button class="btn btn-danger btn-sm">Reject</button>
+                </form>
+                {% else %}
+                <span class="text-muted">No actions</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

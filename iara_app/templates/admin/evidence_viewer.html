@@ -1,0 +1,14 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<h2>Evidence for Violation #{{ violation.id }}</h2>
+
+<ul class="list-group">
+    {% for e in violation.evidence %}
+    <li class="list-group-item">
+        <strong>File:</strong> {{ e.file_path }}<br>
+        <strong>Note:</strong> {{ e.note }}
+    </li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

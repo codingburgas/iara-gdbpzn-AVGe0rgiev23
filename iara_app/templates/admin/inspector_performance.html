@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Inspector Performance</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Inspector</th>
+            <th>Total Inspections</th>
+            <th>Average Score</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in performance %}
+        <tr>
+            <td>{{ p.inspector.first_name }} {{ p.inspector.last_name }}</td>
+            <td>{{ p.total_inspections }}</td>
+            <td>{{ p.avg_score or "N/A" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

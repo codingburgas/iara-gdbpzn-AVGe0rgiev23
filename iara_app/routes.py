@@ -21,30 +21,22 @@ from . import db
 
 bp = Blueprint("main", __name__)
 
-
 # ============================================================
 # FILE UPLOAD CONFIG (EVIDENCE)
 # ============================================================
 
 ALLOWED_EVIDENCE_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
-# Base directory of the project
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-# Evidence upload folder: /static/uploads/evidence/
 EVIDENCE_UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "evidence")
-
-# Ensure folder exists
 os.makedirs(EVIDENCE_UPLOAD_FOLDER, exist_ok=True)
 
 
 def allowed_evidence_file(filename: str) -> bool:
-    """Check if file extension is allowed."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EVIDENCE_EXTENSIONS
 
 
 def inspection_is_locked(inspection: Inspection) -> bool:
-    """Return True if inspection is locked (submitted/approved)."""
     return inspection.status in ["submitted", "approved"]
 
 
@@ -79,7 +71,7 @@ def login():
 
         flash("Invalid email or password.", "danger")
 
-    return render_template("login.html", form=form)
+    return render_template("auth/login.html", form=form)
 
 
 @bp.route("/logout")
@@ -114,7 +106,7 @@ def register():
         flash("Registration successful! You can now log in.", "success")
         return redirect(url_for("main.login"))
 
-    return render_template("register.html", form=form)
+    return render_template("auth/register.html", form=form)
 
 
 # ============================================================
@@ -140,7 +132,7 @@ def admin_dashboard():
     ).count()
 
     return render_template(
-        "admin_dashboard.html",
+        "dashboard/admin_dashboard.html",
         total_permits=total_permits,
         active_permits=active_permits,
         expired_permits=expired_permits,
@@ -158,25 +150,21 @@ def inspector_dashboard():
 
     today = date.today()
 
-    # Today's inspections
     todays_inspections = Inspection.query.filter_by(
         inspector_id=current_user.id,
         date=today
     ).order_by(Inspection.date.desc()).all()
 
-    # Violations needing resolution
     pending_resolution = Violation.query.join(Inspection).filter(
         Inspection.inspector_id == current_user.id,
         Violation.status == "open"
     ).all()
 
-    # Violations marked as corrected but not reviewed
     corrected_waiting = Violation.query.join(Inspection).filter(
         Inspection.inspector_id == current_user.id,
         Violation.status == "corrected"
     ).all()
 
-    # Evidence reminders (violations with no evidence)
     violations_no_evidence = Violation.query.join(Inspection).filter(
         Inspection.inspector_id == current_user.id
     ).all()
@@ -185,7 +173,6 @@ def inspector_dashboard():
         v for v in violations_no_evidence if len(v.evidence) == 0
     ]
 
-    # Score trend (last 10 inspections)
     recent_inspections = Inspection.query.filter_by(
         inspector_id=current_user.id
     ).order_by(Inspection.date.desc()).limit(10).all()
@@ -193,7 +180,7 @@ def inspector_dashboard():
     score_trend = [insp.final_score for insp in recent_inspections if insp.final_score is not None]
 
     return render_template(
-        "inspector_dashboard.html",
+        "dashboard/inspector_dashboard.html",
         todays_inspections=todays_inspections,
         pending_resolution=pending_resolution,
         corrected_waiting=corrected_waiting,
@@ -203,13 +190,12 @@ def inspector_dashboard():
     )
 
 
-
 @bp.route("/fisherman/dashboard")
 @login_required
 def fisherman_dashboard():
     if current_user.role != "fisherman":
         abort(403)
-    return render_template("fisherman_dashboard.html")
+    return render_template("dashboard/fisherman_dashboard.html")
 
 
 @bp.route("/amateur/dashboard")
@@ -217,7 +203,7 @@ def fisherman_dashboard():
 def amateur_dashboard():
     if current_user.role != "amateur":
         abort(403)
-    return render_template("amateur_dashboard.html")
+    return render_template("dashboard/amateur_dashboard.html")
 
 
 # ============================================================
@@ -249,7 +235,7 @@ def add_vessel():
 
         return redirect(url_for("main.vessels"))
 
-    return render_template("add_vessel.html", form=form, title="Add Vessel")
+    return render_template("vessels/add_vessel.html", form=form, title="Add Vessel")
 
 
 @bp.route("/admin/vessels")
@@ -259,7 +245,7 @@ def vessels():
         abort(403)
 
     all_vessels = Vessel.query.all()
-    return render_template("vessels.html", vessels=all_vessels, title="Vessel Registry")
+    return render_template("vessels/vessels.html", vessels=all_vessels, title="Vessel Registry")
 
 
 @bp.route("/admin/vessels/<int:vessel_id>")
@@ -269,7 +255,7 @@ def vessel_details(vessel_id):
         abort(403)
 
     vessel = Vessel.query.get_or_404(vessel_id)
-    return render_template("vessel_details.html", vessel=vessel, title="Vessel Details")
+    return render_template("vessels/vessel_details.html", vessel=vessel, title="Vessel Details")
 
 
 # ============================================================
@@ -328,7 +314,7 @@ def permits():
     vessels = Vessel.query.all()
 
     return render_template(
-        "permits.html",
+        "permits/permits.html",
         permits=permits,
         vessels=vessels,
         title="Fishing Permits"
@@ -347,7 +333,7 @@ def permit_details(permit_id):
         permit.status = "Expired"
         db.session.commit()
 
-    return render_template("permit_details.html", permit=permit, title="Permit Details")
+    return render_template("permits/permit_details.html", permit=permit, title="Permit Details")
 
 
 @bp.route("/admin/permits/add", methods=["GET", "POST"])
@@ -375,7 +361,7 @@ def add_permit():
         flash("Permit created successfully!", "success")
         return redirect(url_for("main.permits"))
 
-    return render_template("add_permit.html", form=form, title="Add Permit")
+    return render_template("permits/add_permit.html", form=form, title="Add Permit")
 
 
 @bp.route("/admin/permits/<int:permit_id>/edit", methods=["GET", "POST"])
@@ -400,7 +386,7 @@ def edit_permit(permit_id):
         flash("Permit updated successfully!", "success")
         return redirect(url_for("main.permit_details", permit_id=permit.id))
 
-    return render_template("edit_permit.html", form=form, permit=permit, title="Edit Permit")
+    return render_template("permits/edit_permit.html", form=form, permit=permit, title="Edit Permit")
 
 
 @bp.route("/admin/permits/<int:permit_id>/delete", methods=["POST"])
@@ -805,8 +791,7 @@ def resolve_violation(violation_id):
         evidence = Evidence(
             violation_id=violation.id,
             file_path=relative_path,
-            note="Correction evidence",
-            category="Correction"
+            note="Correction evidence"
         )
         db.session.add(evidence)
 
@@ -814,7 +799,6 @@ def resolve_violation(violation_id):
 
     flash("Violation marked as corrected.", "success")
     return redirect(url_for("main.violation_details", violation_id=violation.id))
-
 
 @bp.route("/inspections/<int:inspection_id>/finalize", methods=["GET", "POST"])
 @login_required
@@ -859,11 +843,10 @@ def finalize_inspection(inspection_id):
 
         db.session.commit()
 
-        flash("Inspection submitted successfully.", "success")
+        flash("Inspection submitted successfully!", "success")
         return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
 
     return render_template("inspections/finalize.html", inspection=inspection)
-
 
 @bp.route("/admin/vessels/<int:vessel_id>/inspections")
 @login_required
@@ -877,7 +860,6 @@ def vessel_inspection_history(vessel_id):
         vessel_id=vessel.id
     ).order_by(Inspection.date.desc()).all()
 
-    # Build summaries
     history = []
     for insp in inspections:
         total_violations = len(insp.violations)
@@ -905,3 +887,120 @@ def vessel_inspection_history(vessel_id):
         vessel=vessel,
         history=history
     )
+
+@bp.route("/admin/inspections")
+@login_required
+def admin_inspections():
+    if current_user.role != "administrator":
+        abort(403)
+
+    inspections = Inspection.query.order_by(Inspection.date.desc()).all()
+
+    return render_template(
+        "admin/inspections_list.html",
+        inspections=inspections
+    )
+
+
+@bp.route("/admin/violations")
+@login_required
+def admin_violations():
+    if current_user.role != "administrator":
+        abort(403)
+
+    violations = Violation.query.order_by(Violation.created_at.desc()).all()
+
+    return render_template(
+        "admin/violations_list.html",
+        violations=violations
+    )
+
+
+@bp.route("/admin/violation/<int:violation_id>/evidence")
+@login_required
+def admin_view_evidence(violation_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+
+    return render_template(
+        "admin/evidence_viewer.html",
+        violation=violation
+    )
+
+
+@bp.route("/admin/violation/<int:violation_id>/approve", methods=["POST"])
+@login_required
+def admin_approve_violation(violation_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+    violation.status = "approved"
+    violation.resolved_at = datetime.utcnow()
+
+    db.session.commit()
+    return redirect(url_for("main.admin_violations"))
+
+
+@bp.route("/admin/violation/<int:violation_id>/reject", methods=["POST"])
+@login_required
+def admin_reject_violation(violation_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+    violation.status = "rejected"
+
+    db.session.commit()
+    return redirect(url_for("main.admin_violations"))
+
+@bp.route("/admin/inspections/<int:inspection_id>/override_score", methods=["POST"])
+@login_required
+def admin_override_score(inspection_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+    new_score = int(request.form.get("new_score"))
+
+    inspection.final_score = new_score
+    inspection.approved_at = datetime.utcnow()
+
+    db.session.commit()
+    return redirect(url_for("main.admin_inspections"))
+
+
+@bp.route("/admin/inspectors/performance")
+@login_required
+def admin_inspector_performance():
+    if current_user.role != "administrator":
+        abort(403)
+
+    inspectors = User.query.filter_by(role="inspector").all()
+
+    performance = []
+
+    for inspector in inspectors:
+        inspections = Inspection.query.filter_by(inspector_id=inspector.id).all()
+        total = len(inspections)
+        avg_score = None
+
+        if total > 0:
+            scores = [i.final_score for i in inspections if i.final_score is not None]
+            if scores:
+                avg_score = sum(scores) / len(scores)
+
+        performance.append({
+            "inspector": inspector,
+            "total_inspections": total,
+            "avg_score": avg_score
+        })
+
+    return render_template(
+        "admin/inspector_performance.html",
+        performance=performance
+    )
+
+
