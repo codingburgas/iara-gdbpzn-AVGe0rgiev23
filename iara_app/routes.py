@@ -8,7 +8,10 @@ from wtforms.fields import DateField
 from io import StringIO
 import csv
 
-from .models import User, Vessel, Permit, Inspection
+from .models import (
+    User, Vessel, Permit, Inspection,
+    Violation, ViolationCode, ViolationSeverity
+)
 from .forms import LoginForm, RegistrationForm, VesselForm, PermitForm
 from . import db
 
@@ -142,7 +145,7 @@ def amateur_dashboard():
 
 
 # ============================================================
-# VESSELS
+# VESSELS (ADMIN ONLY)
 # ============================================================
 
 @bp.route("/admin/vessels/add", methods=["GET", "POST"])
@@ -194,7 +197,7 @@ def vessel_details(vessel_id):
 
 
 # ============================================================
-# PERMITS
+# PERMITS (ADMIN ONLY)
 # ============================================================
 
 @bp.route("/admin/permits")
@@ -408,7 +411,81 @@ def inspection_details(inspection_id):
 
 
 # ============================================================
-# EXPORT TO CSV
+# VIOLATIONS (INSPECTOR ONLY)
+# ============================================================
+
+@bp.route("/inspections/<int:inspection_id>/violations")
+@login_required
+def violations_list(inspection_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    return render_template(
+        "violations/list.html",
+        inspection=inspection,
+        violations=inspection.violations
+    )
+
+
+@bp.route("/inspections/<int:inspection_id>/violations/add", methods=["GET", "POST"])
+@login_required
+def add_violation(inspection_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    violation_codes = ViolationCode.query.all()
+
+    if request.method == "POST":
+        code_id = request.form.get("violation_code_id")
+        severity = request.form.get("severity")
+        description = request.form.get("description")
+
+        if not severity:
+            severity = ViolationSeverity.MEDIUM.value
+
+        violation = Violation(
+            inspection_id=inspection.id,
+            violation_code_id=code_id if code_id != "none" else None,
+            severity=severity,
+            description=description
+        )
+
+        db.session.add(violation)
+
+        deduction = {
+            "Low": 5,
+            "Medium": 10,
+            "High": 20,
+            "Critical": 40
+        }.get(severity, 10)
+
+        inspection.score = max(0, inspection.score - deduction)
+
+        db.session.commit()
+
+        flash("Violation added successfully!", "success")
+        return redirect(url_for("main.violations_list", inspection_id=inspection.id))
+
+    return render_template(
+        "violations/add.html",
+        inspection=inspection,
+        violation_codes=violation_codes,
+        severities=[s.value for s in ViolationSeverity]
+    )
+
+
+# ============================================================
+# EXPORT TO CSV (ADMIN ONLY)
 # ============================================================
 
 @bp.route("/admin/permits/export")

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Add Violation</h2>
+
+<form method="POST">
+
+    <label>Violation Code</label>
+    <select name="violation_code_id" class="form-control">
+        <option value="none">-- No Code (Custom Violation) --</option>
+        {% for code in violation_codes %}
+            <option value="{{ code.id }}">
+                {{ code.code }} — {{ code.title }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label class="mt-3">Severity</label>
+    <select name="severity" class="form-control">
+        {% for s in severities %}
+            <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select>
+
+    <label class="mt-3">Description / Notes</label>
+    <textarea name="description" class="form-control" rows="4"></textarea>
+
+    <button class="btn btn-success mt-3">Add Violation</button>
+</form>
+
+<a href="{{ url_for('main.violations_list', inspection_id=inspection.id) }}"
+   class="btn btn-secondary mt-3">Back</a>
+{% endblock %}

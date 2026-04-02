@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Violations for Inspection {{ inspection.inspection_id }}</h2>
+
+<a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
+   class="btn btn-primary mb-3">Add Violation</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Severity</th>
+            <th>Description</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in violations %}
+        <tr>
+            <td>{{ v.violation_code.code if v.violation_code else "N/A" }}</td>
+            <td>{{ v.severity }}</td>
+            <td>{{ v.description }}</td>
+            <td>{{ v.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('main.inspection_details', inspection_id=inspection.id) }}"
+   class="btn btn-secondary">Back to Inspection</a>
+{% endblock %}

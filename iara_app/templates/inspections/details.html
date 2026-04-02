@@ -14,5 +14,8 @@
     </div>
 </div>
 
+<a href="{{ url_for('main.violations_list', inspection_id=inspection.id) }}"
+   class="btn btn-warning">View Violations</a>
+
 <a href="{{ url_for('main.inspections_list') }}" class="btn btn-secondary">Back</a>
 {% endblock %}
