@@ -1,14 +1,34 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Evidence for Violation {{ violation.id }}</h2>
+<h2>Violation Details</h2>
 
-<div class="mb-3 d-flex gap-2">
+<div class="card mb-4">
+    <div class="card-body">
+
+        <h4 class="mb-3">
+            {{ violation.violation_code.code if violation.violation_code else "No Code Assigned" }}
+        </h4>
+
+        <p><strong>Severity:</strong> {{ violation.severity }}</p>
+        <p><strong>Description:</strong> {{ violation.description }}</p>
+        <p><strong>Date:</strong> {{ violation.created_at }}</p>
+
+        {% if violation.violation_code %}
+        <p><strong>Legal Reference:</strong> {{ violation.violation_code.description }}</p>
+        {% endif %}
+
+    </div>
+</div>
+
+<h4>Evidence</h4>
+
+<div class="mb-3">
     <a href="{{ url_for('main.upload_evidence', violation_id=violation.id) }}"
        class="btn btn-primary">Upload Evidence</a>
 
-    <a href="{{ url_for('main.violations_list', inspection_id=violation.inspection.id) }}"
-       class="btn btn-secondary">Back to Violations</a>
+    <a href="{{ url_for('main.evidence_list', violation_id=violation.id) }}"
+       class="btn btn-secondary">View All Evidence</a>
 </div>
 
 {% if evidence_items %}
@@ -18,25 +38,15 @@
 
         <!-- Thumbnail -->
         <img src="{{ url_for('static', filename=e.file_path) }}"
-             class="img-thumbnail evidence-thumb"
+             class="img-thumbnail"
              data-bs-toggle="modal"
              data-bs-target="#modal{{ e.id }}"
              style="height: 150px; width: 100%; object-fit: cover; cursor: pointer;">
 
-        <!-- Category + Note -->
-        <p class="mt-2 mb-1">
-            <strong>{{ e.category if e.category else "General" }}</strong>
+        <p class="mt-2">
+            <strong>{{ e.category }}</strong><br>
+            {{ e.note if e.note else "" }}
         </p>
-        <p class="text-muted" style="font-size: 0.9rem;">
-            {{ e.note if e.note else "—" }}
-        </p>
-
-        <!-- Delete Button -->
-        <form method="POST"
-              action="{{ url_for('main.delete_evidence', evidence_id=e.id) }}"
-              onsubmit="return confirm('Delete this evidence?');">
-            <button class="btn btn-sm btn-danger">Delete</button>
-        </form>
 
     </div>
 
@@ -61,9 +71,11 @@
 
     {% endfor %}
 </div>
-
 {% else %}
 <p class="text-muted">No evidence uploaded yet.</p>
 {% endif %}
+
+<a href="{{ url_for('main.violations_list', inspection_id=inspection.id) }}"
+   class="btn btn-secondary mt-3">Back to Violations</a>
 
 {% endblock %}
