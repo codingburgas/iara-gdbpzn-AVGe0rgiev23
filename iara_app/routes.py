@@ -703,3 +703,57 @@ def violation_details(violation_id):
         inspection=inspection,
         evidence_items=violation.evidence
     )
+
+
+@bp.route("/violations/<int:violation_id>/resolve", methods=["POST"])
+@login_required
+def resolve_violation(violation_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+    inspection = violation.inspection
+
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    notes = request.form.get("resolution_notes")
+    files = request.files.getlist("correction_files")
+
+    # Update violation status
+    violation.status = "corrected"
+    violation.resolution_notes = notes
+    violation.resolved_at = datetime.utcnow()
+
+    # Save correction evidence
+    for file in files:
+        if file.filename == "":
+            continue
+
+        filename = secure_filename(file.filename)
+
+        correction_folder = os.path.join(
+            EVIDENCE_UPLOAD_FOLDER,
+            str(inspection.id),
+            str(violation.id),
+            "correction"
+        )
+        os.makedirs(correction_folder, exist_ok=True)
+
+        file_path = os.path.join(correction_folder, filename)
+        file.save(file_path)
+
+        relative_path = f"uploads/evidence/{inspection.id}/{violation.id}/correction/{filename}"
+
+        evidence = Evidence(
+            violation_id=violation.id,
+            file_path=relative_path,
+            note="Correction evidence",
+            category="Correction"
+        )
+        db.session.add(evidence)
+
+    db.session.commit()
+
+    flash("Violation marked as corrected.", "success")
+    return redirect(url_for("main.violation_details", violation_id=violation.id))

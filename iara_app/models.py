@@ -236,40 +236,21 @@ class Inspection(db.Model):
 # ============================================================
 
 class Violation(db.Model):
-    __tablename__ = "violations"
-
     id = db.Column(db.Integer, primary_key=True)
+    inspection_id = db.Column(db.Integer, db.ForeignKey("inspection.id"), nullable=False)
+    violation_code_id = db.Column(db.Integer, db.ForeignKey("violation_code.id"))
+    severity = db.Column(db.String(20))
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    inspection_id = db.Column(
-        db.Integer,
-        db.ForeignKey("inspections.id"),
-        nullable=False
-    )
-    violation_code_id = db.Column(
-        db.Integer,
-        db.ForeignKey("violation_codes.id"),
-        nullable=True
-    )
+    # NEW FIELDS FOR RESOLUTION WORKFLOW
+    status = db.Column(db.String(20), default="open")
+    resolution_notes = db.Column(db.Text)
+    resolved_at = db.Column(db.DateTime)
 
-    severity = db.Column(
-        db.String(20),
-        nullable=False,
-        default=ViolationSeverity.MEDIUM.value
-    )
-    description = db.Column(db.Text, nullable=True)
-    fine_amount = db.Column(db.Numeric(10, 2), nullable=True)
+    # Relationship
+    evidence = db.relationship("Evidence", backref="violation", lazy=True)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-    evidence = db.relationship(
-        "Evidence",
-        backref="violation",
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
-
-    def __repr__(self) -> str:
-        return f"<Violation {self.id}>"
 
 
 # ============================================================
