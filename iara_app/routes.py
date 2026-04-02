@@ -682,3 +682,24 @@ def delete_evidence(evidence_id):
 
     flash("Evidence deleted successfully.", "info")
     return redirect(url_for("main.evidence_list", violation_id=violation.id))
+
+
+@bp.route("/violations/<int:violation_id>/details")
+@login_required
+def violation_details(violation_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+    inspection = violation.inspection
+
+    # Inspectors can only view their own violations
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    return render_template(
+        "violations/details.html",
+        violation=violation,
+        inspection=inspection,
+        evidence_items=violation.evidence
+    )
