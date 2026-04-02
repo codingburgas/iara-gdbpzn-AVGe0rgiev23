@@ -6,15 +6,17 @@
 <a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
    class="btn btn-primary mb-3">Add Violation</a>
 
-<table class="table table-bordered">
-    <thead>
+<table class="table table-bordered table-striped align-middle">
+    <thead class="table-dark">
         <tr>
             <th>Code</th>
             <th>Severity</th>
             <th>Description</th>
             <th>Date</th>
+            <th>Evidence</th>
         </tr>
     </thead>
+
     <tbody>
         {% for v in violations %}
         <tr>
@@ -22,6 +24,32 @@
             <td>{{ v.severity }}</td>
             <td>{{ v.description }}</td>
             <td>{{ v.created_at }}</td>
+
+            <td class="text-center">
+
+                {# Evidence Count Badge #}
+                {% set count = v.evidence|length %}
+                <span class="badge bg-secondary mb-2">
+                    {{ count }} file{{ 's' if count != 1 else '' }}
+                </span>
+
+                <br>
+
+                {# Thumbnail Preview (first image only) #}
+                {% if count > 0 %}
+                    <img src="{{ url_for('static', filename=v.evidence[0].file_path) }}"
+                         alt="Evidence Preview"
+                         style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc;">
+                    <br>
+                {% endif %}
+
+                {# Evidence Button #}
+                <a href="{{ url_for('main.evidence_list', violation_id=v.id) }}"
+                   class="btn btn-sm btn-info mt-2">
+                    View Evidence
+                </a>
+            </td>
+
         </tr>
         {% endfor %}
     </tbody>

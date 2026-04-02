@@ -7,15 +7,40 @@ from flask_wtf import FlaskForm
 from wtforms.fields import DateField
 from io import StringIO
 import csv
+import os
+
+from werkzeug.utils import secure_filename
 
 from .models import (
     User, Vessel, Permit, Inspection,
-    Violation, ViolationCode, ViolationSeverity
+    Violation, ViolationCode, ViolationSeverity,
+    Evidence
 )
 from .forms import LoginForm, RegistrationForm, VesselForm, PermitForm
 from . import db
 
 bp = Blueprint("main", __name__)
+
+
+# ============================================================
+# FILE UPLOAD CONFIG (EVIDENCE)
+# ============================================================
+
+ALLOWED_EVIDENCE_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+# Base directory of the project
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Evidence upload folder: /static/uploads/evidence/
+EVIDENCE_UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "evidence")
+
+# Ensure folder exists
+os.makedirs(EVIDENCE_UPLOAD_FOLDER, exist_ok=True)
+
+
+def allowed_evidence_file(filename: str) -> bool:
+    """Check if file extension is allowed."""
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EVIDENCE_EXTENSIONS
 
 
 # ============================================================
@@ -546,3 +571,114 @@ def export_permits():
     response.headers["Content-Type"] = "text/csv"
 
     return response
+
+
+# ============================================================
+# EVIDENCE (INSPECTOR ONLY)
+# ============================================================
+
+@bp.route("/violations/<int:violation_id>/evidence")
+@login_required
+def evidence_list(violation_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+    inspection = violation.inspection
+
+    # Inspectors can only view their own inspections
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    return render_template(
+        "evidence/list.html",
+        violation=violation,
+        evidence_items=violation.evidence
+    )
+
+
+@bp.route("/violations/<int:violation_id>/evidence/upload", methods=["GET", "POST"])
+@login_required
+def upload_evidence(violation_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    violation = Violation.query.get_or_404(violation_id)
+    inspection = violation.inspection
+
+    # Inspectors can only upload to their own inspections
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    if request.method == "POST":
+        file = request.files.get("file")
+        note = request.form.get("note")
+
+        if not file or file.filename == "":
+            flash("Please select a file.", "danger")
+            return redirect(request.url)
+
+        if not allowed_evidence_file(file.filename):
+            flash("Invalid file type. Allowed: png, jpg, jpeg, gif", "danger")
+            return redirect(request.url)
+
+        # Secure filename
+        filename = secure_filename(file.filename)
+
+        # Folder structure: /static/uploads/evidence/<inspection>/<violation>/
+        violation_folder = os.path.join(
+            EVIDENCE_UPLOAD_FOLDER,
+            str(inspection.id),
+            str(violation.id)
+        )
+        os.makedirs(violation_folder, exist_ok=True)
+
+        file_path = os.path.join(violation_folder, filename)
+        file.save(file_path)
+
+        # Store relative path for serving in templates
+        relative_path = f"uploads/evidence/{inspection.id}/{violation.id}/{filename}"
+
+        evidence = Evidence(
+            violation_id=violation.id,
+            file_path=relative_path,
+            note=note
+        )
+
+        db.session.add(evidence)
+        db.session.commit()
+
+        flash("Evidence uploaded successfully!", "success")
+        return redirect(url_for("main.evidence_list", violation_id=violation.id))
+
+    return render_template(
+        "evidence/upload.html",
+        violation=violation
+    )
+
+
+@bp.route("/evidence/<int:evidence_id>/delete", methods=["POST"])
+@login_required
+def delete_evidence(evidence_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    evidence = Evidence.query.get_or_404(evidence_id)
+    violation = evidence.violation
+    inspection = violation.inspection
+
+    # Inspectors can only delete their own evidence
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    # Delete file from filesystem
+    file_path = os.path.join(BASE_DIR, "static", evidence.file_path)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Delete DB record
+    db.session.delete(evidence)
+    db.session.commit()
+
+    flash("Evidence deleted successfully.", "info")
+    return redirect(url_for("main.evidence_list", violation_id=violation.id))

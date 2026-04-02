@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Upload Evidence</h2>
+
+<form method="POST" enctype="multipart/form-data" id="uploadForm">
+
+    <label class="form-label">Category</label>
+    <select name="category" class="form-control mb-3">
+        <option value="General">General</option>
+        <option value="Gear">Gear</option>
+        <option value="Catch">Catch</option>
+        <option value="Safety">Safety</option>
+        <option value="Documents">Documents</option>
+    </select>
+
+    <label class="form-label">Note (optional)</label>
+    <textarea name="note" class="form-control mb-3" rows="3"></textarea>
+
+    <!-- Drag & Drop Zone -->
+    <div id="dropZone"
+         class="border border-primary rounded p-4 text-center mb-3"
+         style="cursor: pointer; background: #f8f9fa;">
+        <p class="mb-0">Drag & Drop files here or click to select</p>
+        <input type="file" name="files" id="fileInput" multiple hidden>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress mb-3" style="height: 20px; display: none;" id="progressContainer">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             id="uploadProgress"
+             role="progressbar"
+             style="width: 0%;">0%</div>
+    </div>
+
+    <button class="btn btn-success">Upload</button>
+</form>
+
+<a href="{{ url_for('main.evidence_list', violation_id=violation.id) }}"
+   class="btn btn-secondary mt-3">Back</a>
+
+<script>
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+const form = document.getElementById("uploadForm");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("uploadProgress");
+
+dropZone.onclick = () => fileInput.click();
+
+dropZone.ondragover = (e) => {
+    e.preventDefault();
+    dropZone.classList.add("bg-light");
+};
+
+dropZone.ondragleave = () => {
+    dropZone.classList.remove("bg-light");
+};
+
+dropZone.ondrop = (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("bg-light");
+    fileInput.files = e.dataTransfer.files;
+};
+
+form.onsubmit = (e) => {
+    progressContainer.style.display = "block";
+
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressBar.style.width = percent + "%";
+            progressBar.textContent = percent + "%";
+        }
+    };
+
+    xhr.onload = () => form.submit();
+    xhr.open("POST", window.location.href);
+    xhr.send(new FormData(form));
+
+    e.preventDefault();
+};
+</script>
+
+{% endblock %}
