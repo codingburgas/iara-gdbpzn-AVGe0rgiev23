@@ -7,7 +7,11 @@
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/iara_app/venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.15 (iara-gdbpzn-AVGe0rgiev23) (2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.14 (iara-gdbpzn-AVGe0rgiev23)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PackageRequirementsSettings">
+    <option name="removeUnused" value="true" />
+    <option name="modifyBaseFiles" value="true" />
   </component>
 </module>

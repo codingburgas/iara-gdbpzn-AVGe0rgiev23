@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Create Inspection</h2>
+
+<form method="POST">
+
+    <label>Vessel</label>
+    <select name="vessel_id" class="form-control" required>
+        {% for v in vessels %}
+            <option value="{{ v.id }}">{{ v.call_sign }} — {{ v.international_number }}</option>
+        {% endfor %}
+    </select>
+
+    <label class="mt-3">Location</label>
+    <input type="text" name="location" class="form-control" required>
+
+    <label class="mt-3">Notes</label>
+    <textarea name="notes" class="form-control"></textarea>
+
+    <button class="btn btn-success mt-3">Create Inspection</button>
+</form>
+{% endblock %}

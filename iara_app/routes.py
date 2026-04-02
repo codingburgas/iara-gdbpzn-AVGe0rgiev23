@@ -8,16 +8,16 @@ from wtforms.fields import DateField
 from io import StringIO
 import csv
 
-from .models import User, Vessel, Permit
+from .models import User, Vessel, Permit, Inspection
 from .forms import LoginForm, RegistrationForm, VesselForm, PermitForm
 from . import db
 
 bp = Blueprint("main", __name__)
 
 
-# -------------------------
+# ============================================================
 # AUTH
-# -------------------------
+# ============================================================
 
 @bp.route("/")
 def home():
@@ -84,9 +84,9 @@ def register():
     return render_template("register.html", form=form)
 
 
-# -------------------------
+# ============================================================
 # DASHBOARDS
-# -------------------------
+# ============================================================
 
 @bp.route("/admin/dashboard")
 @login_required
@@ -95,18 +95,15 @@ def admin_dashboard():
         abort(403)
 
     today = date.today()
-    next_month = today.replace(day=today.day)  # safe copy
 
-    # Stats
     total_permits = Permit.query.count()
     active_permits = Permit.query.filter_by(status="Active").count()
     expired_permits = Permit.query.filter_by(status="Expired").count()
     suspended_permits = Permit.query.filter_by(status="Suspended").count()
 
-    # Expiring soon (next 30 days)
     expiring_soon = Permit.query.filter(
         Permit.expiry_date >= today,
-        Permit.expiry_date <= today.replace(day=today.day) + timedelta(days=30)
+        Permit.expiry_date <= today + timedelta(days=30)
     ).count()
 
     return render_template(
@@ -118,7 +115,6 @@ def admin_dashboard():
         expiring_soon=expiring_soon,
         title="Admin Dashboard"
     )
-
 
 
 @bp.route("/inspector/dashboard")
@@ -145,13 +141,16 @@ def amateur_dashboard():
     return render_template("amateur_dashboard.html")
 
 
-# -------------------------
+# ============================================================
 # VESSELS
-# -------------------------
+# ============================================================
 
 @bp.route("/admin/vessels/add", methods=["GET", "POST"])
 @login_required
 def add_vessel():
+    if current_user.role != "administrator":
+        abort(403)
+
     form = VesselForm()
 
     if form.validate_on_submit():
@@ -177,6 +176,9 @@ def add_vessel():
 @bp.route("/admin/vessels")
 @login_required
 def vessels():
+    if current_user.role != "administrator":
+        abort(403)
+
     all_vessels = Vessel.query.all()
     return render_template("vessels.html", vessels=all_vessels, title="Vessel Registry")
 
@@ -184,23 +186,28 @@ def vessels():
 @bp.route("/admin/vessels/<int:vessel_id>")
 @login_required
 def vessel_details(vessel_id):
+    if current_user.role != "administrator":
+        abort(403)
+
     vessel = Vessel.query.get_or_404(vessel_id)
     return render_template("vessel_details.html", vessel=vessel, title="Vessel Details")
 
 
-# -------------------------
-# PERMITS LIST + FILTERS + PAGINATION
-# -------------------------
+# ============================================================
+# PERMITS
+# ============================================================
 
 @bp.route("/admin/permits")
 @login_required
 def permits():
+    if current_user.role != "administrator":
+        abort(403)
+
     page = request.args.get("page", 1, type=int)
     per_page = 10
 
     query = Permit.query
 
-    # Filters
     status = request.args.get("status")
     vessel_id = request.args.get("vessel_id")
     permit_type = request.args.get("permit_type")
@@ -222,14 +229,12 @@ def permits():
     if date_to:
         query = query.filter(Permit.issue_date <= date_to)
 
-    # Pagination
     permits = query.order_by(Permit.issue_date.desc()).paginate(
         page=page,
         per_page=per_page,
         error_out=False
     )
 
-    # Auto-expire logic
     today = date.today()
     changed = False
 
@@ -251,13 +256,12 @@ def permits():
     )
 
 
-# -------------------------
-# PERMIT DETAILS
-# -------------------------
-
 @bp.route("/admin/permits/<int:permit_id>")
 @login_required
 def permit_details(permit_id):
+    if current_user.role != "administrator":
+        abort(403)
+
     permit = Permit.query.get_or_404(permit_id)
 
     if permit.expiry_date < date.today() and permit.status != "Expired":
@@ -267,13 +271,12 @@ def permit_details(permit_id):
     return render_template("permit_details.html", permit=permit, title="Permit Details")
 
 
-# -------------------------
-# ADD / EDIT / DELETE PERMIT
-# -------------------------
-
 @bp.route("/admin/permits/add", methods=["GET", "POST"])
 @login_required
 def add_permit():
+    if current_user.role != "administrator":
+        abort(403)
+
     form = PermitForm()
     form.set_vessel_choices()
 
@@ -299,6 +302,9 @@ def add_permit():
 @bp.route("/admin/permits/<int:permit_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_permit(permit_id):
+    if current_user.role != "administrator":
+        abort(403)
+
     permit = Permit.query.get_or_404(permit_id)
     form = PermitForm(obj=permit)
     form.set_vessel_choices()
@@ -321,6 +327,9 @@ def edit_permit(permit_id):
 @bp.route("/admin/permits/<int:permit_id>/delete", methods=["POST"])
 @login_required
 def delete_permit(permit_id):
+    if current_user.role != "administrator":
+        abort(403)
+
     permit = Permit.query.get_or_404(permit_id)
 
     db.session.delete(permit)
@@ -330,76 +339,86 @@ def delete_permit(permit_id):
     return redirect(url_for("main.permits"))
 
 
-# -------------------------
-# PERMIT STATUS ACTIONS
-# -------------------------
+# ============================================================
+# INSPECTIONS (INSPECTOR ONLY)
+# ============================================================
 
-@bp.route("/admin/permits/<int:permit_id>/activate", methods=["POST"])
+@bp.route("/inspections")
 @login_required
-def activate_permit(permit_id):
-    permit = Permit.query.get_or_404(permit_id)
-    permit.status = "Active"
-    db.session.commit()
-    flash("Permit activated.", "success")
-    return redirect(url_for("main.permit_details", permit_id=permit.id))
+def inspections_list():
+    if current_user.role != "inspector":
+        abort(403)
+
+    inspections = Inspection.query.filter_by(
+        inspector_id=current_user.id
+    ).order_by(Inspection.date.desc()).all()
+
+    return render_template("inspections/list.html", inspections=inspections)
 
 
-@bp.route("/admin/permits/<int:permit_id>/suspend", methods=["POST"])
+@bp.route("/inspections/create", methods=["GET", "POST"])
 @login_required
-def suspend_permit(permit_id):
-    permit = Permit.query.get_or_404(permit_id)
-    permit.status = "Suspended"
-    db.session.commit()
-    flash("Permit suspended.", "warning")
-    return redirect(url_for("main.permit_details", permit_id=permit.id))
+def create_inspection():
+    if current_user.role != "inspector":
+        abort(403)
 
+    vessels = Vessel.query.all()
 
-@bp.route("/admin/permits/<int:permit_id>/expire", methods=["POST"])
-@login_required
-def expire_permit(permit_id):
-    permit = Permit.query.get_or_404(permit_id)
-    permit.status = "Expired"
-    db.session.commit()
-    flash("Permit marked as expired.", "info")
-    return redirect(url_for("main.permit_details", permit_id=permit.id))
+    if request.method == "POST":
+        vessel_id = request.form.get("vessel_id")
+        location = request.form.get("location")
+        notes = request.form.get("notes")
 
+        permit = Permit.query.filter_by(vessel_id=vessel_id).order_by(
+            Permit.expiry_date.desc()
+        ).first()
 
-# -------------------------
-# PERMIT RENEWAL
-# -------------------------
+        permit_status = permit.status if permit else "No Permit"
 
-@bp.route("/admin/permits/<int:permit_id>/renew", methods=["GET", "POST"])
-@login_required
-def renew_permit(permit_id):
-    permit = Permit.query.get_or_404(permit_id)
+        new_insp = Inspection(
+            vessel_id=vessel_id,
+            inspector_id=current_user.id,
+            location=location,
+            notes=notes,
+            permit_status_snapshot=permit_status,
+            date=date.today()
+        )
 
-    class RenewalForm(FlaskForm):
-        new_expiry_date = DateField("New Expiry Date", validators=[DataRequired()])
-        submit = SubmitField("Renew Permit")
-
-    form = RenewalForm(new_expiry_date=permit.expiry_date)
-
-    if form.validate_on_submit():
-        permit.expiry_date = form.new_expiry_date.data
-        permit.status = "Active"
+        db.session.add(new_insp)
         db.session.commit()
 
-        flash("Permit renewed successfully.", "success")
-        return redirect(url_for("main.permit_details", permit_id=permit.id))
+        flash("Inspection created successfully!", "success")
+        return redirect(url_for("main.inspections_list"))
 
-    return render_template("renew_permit.html", form=form, permit=permit, title="Renew Permit")
+    return render_template("inspections/create.html", vessels=vessels)
 
 
-# -------------------------
+@bp.route("/inspections/<int:inspection_id>")
+@login_required
+def inspection_details(inspection_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    return render_template("inspections/details.html", inspection=inspection)
+
+
+# ============================================================
 # EXPORT TO CSV
-# -------------------------
+# ============================================================
 
 @bp.route("/admin/permits/export")
 @login_required
 def export_permits():
+    if current_user.role != "administrator":
+        abort(403)
+
     query = Permit.query
 
-    # Apply filters
     status = request.args.get("status")
     vessel_id = request.args.get("vessel_id")
     permit_type = request.args.get("permit_type")
@@ -423,7 +442,6 @@ def export_permits():
 
     permits = query.order_by(Permit.issue_date.desc()).all()
 
-    # Create CSV
     output = StringIO()
     writer = csv.writer(output)
 

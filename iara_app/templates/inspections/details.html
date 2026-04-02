@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Inspection {{ inspection.inspection_id }}</h2>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p><strong>Vessel:</strong> {{ inspection.vessel.call_sign }}</p>
+        <p><strong>Date:</strong> {{ inspection.date }}</p>
+        <p><strong>Location:</strong> {{ inspection.location }}</p>
+        <p><strong>Permit Status at Inspection:</strong> {{ inspection.permit_status_snapshot }}</p>
+        <p><strong>Score:</strong> {{ inspection.score }}</p>
+        <p><strong>Notes:</strong> {{ inspection.notes }}</p>
+    </div>
+</div>
+
+<a href="{{ url_for('main.inspections_list') }}" class="btn btn-secondary">Back</a>
+{% endblock %}

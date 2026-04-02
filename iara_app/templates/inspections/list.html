@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Your Inspections</h2>
+
+<a href="{{ url_for('main.create_inspection') }}" class="btn btn-primary mb-3">
+    Start New Inspection
+</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Vessel</th>
+            <th>Date</th>
+            <th>Location</th>
+            <th>Score</th>
+            <th>View</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for insp in inspections %}
+        <tr>
+            <td>{{ insp.inspection_id }}</td>
+            <td>{{ insp.vessel.call_sign }}</td>
+            <td>{{ insp.date }}</td>
+            <td>{{ insp.location }}</td>
+            <td>{{ insp.score }}</td>
+            <td>
+                <a href="{{ url_for('main.inspection_details', inspection_id=insp.id) }}" class="btn btn-sm btn-info">
+                    Open
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

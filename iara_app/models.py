@@ -37,13 +37,16 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=False)
 
-    role = db.Column(db.String(50), nullable=False)  # admin, inspector, operator
+    # Roles: administrator, inspector, fisherman, amateur
+    role = db.Column(db.String(50), nullable=False)
 
     password_hash = db.Column(db.String(128), nullable=False)
 
+    # Optional fields for fishermen / amateurs
     vessel_registration = db.Column(db.String(50))
     fishing_permit_number = db.Column(db.String(50))
 
+    # Optional external inspector identifier (badge, internal ID, etc.)
     inspector_id = db.Column(db.String(50))
 
     id_number = db.Column(db.String(50))
@@ -55,20 +58,20 @@ class User(UserMixin, db.Model):
     # Relationship: Inspector → Inspections
     inspections = db.relationship("Inspection", backref="inspector", lazy=True)
 
-    def set_password(self, password):
+    def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(
             password.encode("utf-8"), bcrypt.gensalt()
         ).decode("utf-8")
 
-    def check_password(self, password):
+    def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(
             password.encode("utf-8"), self.password_hash.encode("utf-8")
         )
 
-    def get_id(self):
+    def get_id(self) -> str:
         return str(self.id)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<User {self.email} ({self.role})>"
 
 
@@ -95,7 +98,7 @@ class Vessel(db.Model):
     # Vessel → Inspections
     inspections = db.relationship("Inspection", backref="vessel", lazy=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Vessel {self.call_sign}>"
 
 
@@ -116,12 +119,16 @@ class Permit(db.Model):
     issue_date = db.Column(db.Date, nullable=False)
     expiry_date = db.Column(db.Date, nullable=False)
 
-    status = db.Column(db.String(20), nullable=False, default=PermitStatus.ACTIVE.value)
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default=PermitStatus.ACTIVE.value
+    )
 
-    def is_expired(self):
+    def is_expired(self) -> bool:
         return date.today() > self.expiry_date
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Permit {self.permit_number} ({self.status})>"
 
 
@@ -137,7 +144,7 @@ class ViolationCategory(db.Model):
 
     codes = db.relationship("ViolationCode", backref="category", lazy=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ViolationCategory {self.name}>"
 
 
@@ -153,12 +160,20 @@ class ViolationCode(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    category_id = db.Column(db.Integer, db.ForeignKey("violation_categories.id"), nullable=False)
-    default_severity = db.Column(db.String(20), nullable=False, default=ViolationSeverity.MEDIUM.value)
+    category_id = db.Column(
+        db.Integer,
+        db.ForeignKey("violation_categories.id"),
+        nullable=False
+    )
+    default_severity = db.Column(
+        db.String(20),
+        nullable=False,
+        default=ViolationSeverity.MEDIUM.value
+    )
 
     violations = db.relationship("Violation", backref="violation_code", lazy=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ViolationCode {self.code}>"
 
 
@@ -166,7 +181,7 @@ class ViolationCode(db.Model):
 # INSPECTION
 # ============================================================
 
-def generate_inspection_id():
+def generate_inspection_id() -> str:
     now = datetime.utcnow()
     return f"INSP-{now.year}-{int(now.timestamp())}"
 
@@ -175,16 +190,32 @@ class Inspection(db.Model):
     __tablename__ = "inspections"
 
     id = db.Column(db.Integer, primary_key=True)
-    inspection_id = db.Column(db.String(50), unique=True, nullable=False, default=generate_inspection_id)
+    inspection_id = db.Column(
+        db.String(50),
+        unique=True,
+        nullable=False,
+        default=generate_inspection_id
+    )
 
-    vessel_id = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
-    inspector_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    vessel_id = db.Column(
+        db.Integer,
+        db.ForeignKey("vessel.id"),
+        nullable=False
+    )
+    inspector_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
 
     date = db.Column(db.Date, nullable=False, default=date.today)
     location = db.Column(db.String(255), nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
+    # Snapshot of permit status at inspection time
     permit_status_snapshot = db.Column(db.String(50), nullable=True)
+
+    # Overall inspection score (0–100)
     score = db.Column(db.Integer, nullable=False, default=100)
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -196,7 +227,7 @@ class Inspection(db.Model):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Inspection {self.inspection_id}>"
 
 
@@ -209,10 +240,22 @@ class Violation(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    inspection_id = db.Column(db.Integer, db.ForeignKey("inspections.id"), nullable=False)
-    violation_code_id = db.Column(db.Integer, db.ForeignKey("violation_codes.id"), nullable=True)
+    inspection_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inspections.id"),
+        nullable=False
+    )
+    violation_code_id = db.Column(
+        db.Integer,
+        db.ForeignKey("violation_codes.id"),
+        nullable=True
+    )
 
-    severity = db.Column(db.String(20), nullable=False, default=ViolationSeverity.MEDIUM.value)
+    severity = db.Column(
+        db.String(20),
+        nullable=False,
+        default=ViolationSeverity.MEDIUM.value
+    )
     description = db.Column(db.Text, nullable=True)
     fine_amount = db.Column(db.Numeric(10, 2), nullable=True)
 
@@ -225,7 +268,7 @@ class Violation(db.Model):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Violation {self.id}>"
 
 
@@ -238,11 +281,15 @@ class Evidence(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    violation_id = db.Column(db.Integer, db.ForeignKey("violations.id"), nullable=False)
+    violation_id = db.Column(
+        db.Integer,
+        db.ForeignKey("violations.id"),
+        nullable=False
+    )
     file_path = db.Column(db.String(255), nullable=True)
     note = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Evidence {self.id}>"
