@@ -3,6 +3,11 @@
 {% block content %}
 <h2>Inspection {{ inspection.inspection_id }}</h2>
 
+{% if inspection.status == "draft" or inspection.status == "in_progress" %}
+<a href="{{ url_for('main.finalize_inspection', inspection_id=inspection.id) }}"
+   class="btn btn-success mb-3">Finalize Inspection</a>
+{% endif %}
+
 <div class="card mb-3">
     <div class="card-body">
         <p><strong>Vessel:</strong> {{ inspection.vessel.call_sign }}</p>

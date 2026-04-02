@@ -187,48 +187,20 @@ def generate_inspection_id() -> str:
 
 
 class Inspection(db.Model):
-    __tablename__ = "inspections"
-
     id = db.Column(db.Integer, primary_key=True)
-    inspection_id = db.Column(
-        db.String(50),
-        unique=True,
-        nullable=False,
-        default=generate_inspection_id
-    )
+    vessel_id = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
+    inspector_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    vessel_id = db.Column(
-        db.Integer,
-        db.ForeignKey("vessel.id"),
-        nullable=False
-    )
-    inspector_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    # NEW FIELDS
+    status = db.Column(db.String(20), default="draft")
+    final_score = db.Column(db.Integer)
+    inspector_signature = db.Column(db.String(255))
+    submitted_at = db.Column(db.DateTime)
+    approved_at = db.Column(db.DateTime)
+    rejected_at = db.Column(db.DateTime)
 
-    date = db.Column(db.Date, nullable=False, default=date.today)
-    location = db.Column(db.String(255), nullable=True)
-    notes = db.Column(db.Text, nullable=True)
-
-    # Snapshot of permit status at inspection time
-    permit_status_snapshot = db.Column(db.String(50), nullable=True)
-
-    # Overall inspection score (0–100)
-    score = db.Column(db.Integer, nullable=False, default=100)
-
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-    violations = db.relationship(
-        "Violation",
-        backref="inspection",
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
-
-    def __repr__(self) -> str:
-        return f"<Inspection {self.inspection_id}>"
+    violations = db.relationship("Violation", backref="inspection", lazy=True)
 
 
 # ============================================================

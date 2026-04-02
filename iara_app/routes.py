@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, make_response
 from flask_login import login_user, logout_user, login_required, current_user
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from wtforms import SubmitField
 from wtforms.validators import DataRequired
 from flask_wtf import FlaskForm
@@ -41,6 +41,11 @@ os.makedirs(EVIDENCE_UPLOAD_FOLDER, exist_ok=True)
 def allowed_evidence_file(filename: str) -> bool:
     """Check if file extension is allowed."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EVIDENCE_EXTENSIONS
+
+
+def inspection_is_locked(inspection: Inspection) -> bool:
+    """Return True if inspection is locked (submitted/approved)."""
+    return inspection.status in ["submitted", "approved"]
 
 
 # ============================================================
@@ -468,6 +473,10 @@ def add_violation(inspection_id):
     if inspection.inspector_id != current_user.id:
         abort(403)
 
+    if inspection_is_locked(inspection):
+        flash("This inspection is locked and cannot be modified.", "danger")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
+
     violation_codes = ViolationCode.query.all()
 
     if request.method == "POST":
@@ -487,12 +496,13 @@ def add_violation(inspection_id):
 
         db.session.add(violation)
 
-        deduction = {
+        deduction_map = {
             "Low": 5,
             "Medium": 10,
             "High": 20,
             "Critical": 40
-        }.get(severity, 10)
+        }
+        deduction = deduction_map.get(severity, 10)
 
         inspection.score = max(0, inspection.score - deduction)
 
@@ -586,7 +596,6 @@ def evidence_list(violation_id):
     violation = Violation.query.get_or_404(violation_id)
     inspection = violation.inspection
 
-    # Inspectors can only view their own inspections
     if inspection.inspector_id != current_user.id:
         abort(403)
 
@@ -606,9 +615,12 @@ def upload_evidence(violation_id):
     violation = Violation.query.get_or_404(violation_id)
     inspection = violation.inspection
 
-    # Inspectors can only upload to their own inspections
     if inspection.inspector_id != current_user.id:
         abort(403)
+
+    if inspection_is_locked(inspection):
+        flash("This inspection is locked and cannot be modified.", "danger")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
 
     if request.method == "POST":
         file = request.files.get("file")
@@ -622,10 +634,8 @@ def upload_evidence(violation_id):
             flash("Invalid file type. Allowed: png, jpg, jpeg, gif", "danger")
             return redirect(request.url)
 
-        # Secure filename
         filename = secure_filename(file.filename)
 
-        # Folder structure: /static/uploads/evidence/<inspection>/<violation>/
         violation_folder = os.path.join(
             EVIDENCE_UPLOAD_FOLDER,
             str(inspection.id),
@@ -636,7 +646,6 @@ def upload_evidence(violation_id):
         file_path = os.path.join(violation_folder, filename)
         file.save(file_path)
 
-        # Store relative path for serving in templates
         relative_path = f"uploads/evidence/{inspection.id}/{violation.id}/{filename}"
 
         evidence = Evidence(
@@ -667,16 +676,17 @@ def delete_evidence(evidence_id):
     violation = evidence.violation
     inspection = violation.inspection
 
-    # Inspectors can only delete their own evidence
     if inspection.inspector_id != current_user.id:
         abort(403)
 
-    # Delete file from filesystem
+    if inspection_is_locked(inspection):
+        flash("This inspection is locked and cannot be modified.", "danger")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
+
     file_path = os.path.join(BASE_DIR, "static", evidence.file_path)
     if os.path.exists(file_path):
         os.remove(file_path)
 
-    # Delete DB record
     db.session.delete(evidence)
     db.session.commit()
 
@@ -693,7 +703,6 @@ def violation_details(violation_id):
     violation = Violation.query.get_or_404(violation_id)
     inspection = violation.inspection
 
-    # Inspectors can only view their own violations
     if inspection.inspector_id != current_user.id:
         abort(403)
 
@@ -717,15 +726,17 @@ def resolve_violation(violation_id):
     if inspection.inspector_id != current_user.id:
         abort(403)
 
+    if inspection_is_locked(inspection):
+        flash("This inspection is locked and cannot be modified.", "danger")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
+
     notes = request.form.get("resolution_notes")
     files = request.files.getlist("correction_files")
 
-    # Update violation status
     violation.status = "corrected"
     violation.resolution_notes = notes
     violation.resolved_at = datetime.utcnow()
 
-    # Save correction evidence
     for file in files:
         if file.filename == "":
             continue
@@ -757,3 +768,52 @@ def resolve_violation(violation_id):
 
     flash("Violation marked as corrected.", "success")
     return redirect(url_for("main.violation_details", violation_id=violation.id))
+
+
+@bp.route("/inspections/<int:inspection_id>/finalize", methods=["GET", "POST"])
+@login_required
+def finalize_inspection(inspection_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    if inspection.status in ["submitted", "approved"]:
+        flash("This inspection has already been submitted.", "info")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
+
+    if request.method == "POST":
+        signature = request.form.get("signature")
+
+        if not signature:
+            flash("Signature is required.", "danger")
+            return redirect(request.url)
+
+        inspection.status = "submitted"
+        inspection.inspector_signature = signature
+        inspection.submitted_at = datetime.utcnow()
+
+        base_score = 100
+        deduction = 0
+
+        deduction_map = {
+            "Low": 5,
+            "Medium": 10,
+            "High": 20,
+            "Critical": 40
+        }
+
+        for v in inspection.violations:
+            deduction += deduction_map.get(v.severity, 10)
+
+        inspection.final_score = max(0, base_score - deduction)
+
+        db.session.commit()
+
+        flash("Inspection submitted successfully.", "success")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
+
+    return render_template("inspections/finalize.html", inspection=inspection)

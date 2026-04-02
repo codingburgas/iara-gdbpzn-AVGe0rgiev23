@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Finalize Inspection</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+
+        <h4>Inspection Summary</h4>
+
+        <p><strong>Vessel:</strong> {{ inspection.vessel.name }}</p>
+        <p><strong>Inspector:</strong> {{ inspection.inspector.username }}</p>
+        <p><strong>Date:</strong> {{ inspection.created_at }}</p>
+
+        <hr>
+
+        <h5>Violations</h5>
+        {% if inspection.violations %}
+        <ul>
+            {% for v in inspection.violations %}
+            <li>
+                <strong>{{ v.violation_code.code if v.violation_code else "No Code" }}</strong>
+                — {{ v.severity }} — {{ v.description }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">No violations recorded.</p>
+        {% endif %}
+
+        <hr>
+
+        <h5>Inspector Signature</h5>
+        <form method="POST">
+            <label class="form-label">Type your full name to sign</label>
+            <input type="text" name="signature" class="form-control mb-3" required>
+
+            <button class="btn btn-success">Submit Inspection</button>
+        </form>
+
+    </div>
+</div>
+
+<a href="{{ url_for('main.inspection_details', inspection_id=inspection.id) }}"
+   class="btn btn-secondary">Back</a>
+
+{% endblock %}
