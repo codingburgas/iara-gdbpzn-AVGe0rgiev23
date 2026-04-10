@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
+from flask_wtf.csrf import CSRFProtect
 from datetime import date
 
 from .config import Config
@@ -12,6 +13,7 @@ login_manager = LoginManager()
 login_manager.login_view = "main.login"
 migrate = Migrate()
 scheduler = APScheduler()
+csrf = CSRFProtect()
 
 
 def expire_old_permits():
@@ -40,6 +42,7 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)  # enables csrf_token() in ALL templates + protects all POST routes
 
     # Register user loader
     from .models import User

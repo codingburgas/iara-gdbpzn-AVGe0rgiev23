@@ -1,60 +1,88 @@
 {% extends "layout/base.html" %}
 
 {% block content %}
-<h2>Violations for Inspection {{ inspection.inspection_id }}</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Violations — Inspection #{{ inspection.id }}</h2>
+    <div class="d-flex gap-2">
+        {% if inspection.status == "draft" %}
+        <a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
+           class="btn btn-danger">+ Add Violation</a>
+        {% endif %}
+        <a href="{{ url_for('main.inspection_details', inspection_id=inspection.id) }}"
+           class="btn btn-secondary">← Back</a>
+    </div>
+</div>
 
-<a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
-   class="btn btn-primary mb-3">Add Violation</a>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
 
+{% if violations %}
 <table class="table table-bordered table-striped align-middle">
     <thead class="table-dark">
         <tr>
+            <th>#</th>
             <th>Code</th>
             <th>Severity</th>
             <th>Description</th>
-            <th>Date</th>
+            <th>Status</th>
             <th>Evidence</th>
+            <th>Actions</th>
         </tr>
     </thead>
-
     <tbody>
         {% for v in violations %}
         <tr>
-            <td>{{ v.violation_code.code if v.violation_code else "N/A" }}</td>
-            <td>{{ v.severity }}</td>
-            <td>{{ v.description }}</td>
-            <td>{{ v.created_at }}</td>
-
-            <td class="text-center">
-
-                {# Evidence Count Badge #}
-                {% set count = v.evidence|length %}
-                <span class="badge bg-secondary mb-2">
-                    {{ count }} file{{ 's' if count != 1 else '' }}
-                </span>
-
-                <br>
-
-                {# Thumbnail Preview (first image only) #}
-                {% if count > 0 %}
-                    <img src="{{ url_for('static', filename=v.evidence[0].file_path) }}"
-                         alt="Evidence Preview"
-                         style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc;">
-                    <br>
+            <td>{{ loop.index }}</td>
+            <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
+            <td>
+                {% if v.severity == "Critical" %}
+                    <span class="badge bg-danger">Critical</span>
+                {% elif v.severity == "High" %}
+                    <span class="badge" style="background:#fd7e14">High</span>
+                {% elif v.severity == "Medium" %}
+                    <span class="badge bg-warning text-dark">Medium</span>
+                {% else %}
+                    <span class="badge bg-secondary">Low</span>
                 {% endif %}
-
-                {# Evidence Button #}
-                <a href="{{ url_for('main.evidence_list', violation_id=v.id) }}"
-                   class="btn btn-sm btn-info mt-2">
-                    View Evidence
-                </a>
             </td>
-
+            <td>{{ v.description or "—" }}</td>
+            <td>
+                {% if v.status == "open" %}
+                    <span class="badge bg-danger">Open</span>
+                {% elif v.status == "corrected" %}
+                    <span class="badge bg-warning text-dark">Corrected</span>
+                {% elif v.status == "approved" %}
+                    <span class="badge bg-success">Approved</span>
+                {% elif v.status == "rejected" %}
+                    <span class="badge bg-secondary">Rejected</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% set count = v.evidence | length %}
+                <span class="badge bg-secondary">{{ count }} file{{ 's' if count != 1 else '' }}</span>
+                {% if count > 0 %}
+                <br>
+                <img src="{{ url_for('static', filename=v.evidence[0].file_path) }}"
+                     style="width:60px;height:60px;object-fit:cover;border-radius:4px;margin-top:4px;">
+                {% endif %}
+            </td>
+            <td>
+                <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                   class="btn btn-sm btn-info">Details</a>
+                <a href="{{ url_for('main.evidence_list', violation_id=v.id) }}"
+                   class="btn btn-sm btn-outline-secondary">Evidence</a>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
-
-<a href="{{ url_for('main.inspection_details', inspection_id=inspection.id) }}"
-   class="btn btn-secondary">Back to Inspection</a>
+{% else %}
+<div class="alert alert-info">No violations recorded for this inspection.</div>
+{% endif %}
 {% endblock %}

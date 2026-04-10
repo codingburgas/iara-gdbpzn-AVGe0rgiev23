@@ -1,7 +1,7 @@
 {% extends "layout/base.html" %}
 
 {% block content %}
-<h2>Inspection History for {{ vessel.name }}</h2>
+<h2>Inspection History for {{ vessel.call_sign }}</h2>
 
 <a href="{{ url_for('main.vessel_details', vessel_id=vessel.id) }}"
    class="btn btn-secondary mb-3">Back to Vessel</a>

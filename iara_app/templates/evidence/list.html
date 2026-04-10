@@ -1,69 +1,65 @@
 {% extends "layout/base.html" %}
 
 {% block content %}
-<h2>Evidence for Violation {{ violation.id }}</h2>
-
-<div class="mb-3 d-flex gap-2">
-    <a href="{{ url_for('main.upload_evidence', violation_id=violation.id) }}"
-       class="btn btn-primary">Upload Evidence</a>
-
-    <a href="{{ url_for('main.violations_list', inspection_id=violation.inspection.id) }}"
-       class="btn btn-secondary">Back to Violations</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Evidence — Violation #{{ violation.id }}</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('main.upload_evidence', violation_id=violation.id) }}"
+           class="btn btn-primary">+ Upload Evidence</a>
+        <a href="{{ url_for('main.violations_list', inspection_id=violation.inspection.id) }}"
+           class="btn btn-secondary">← Back</a>
+    </div>
 </div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
 
 {% if evidence_items %}
 <div class="row">
     {% for e in evidence_items %}
     <div class="col-md-3 mb-4 text-center">
-
-        <!-- Thumbnail -->
         <img src="{{ url_for('static', filename=e.file_path) }}"
              class="img-thumbnail evidence-thumb"
              data-bs-toggle="modal"
              data-bs-target="#modal{{ e.id }}"
-             style="height: 150px; width: 100%; object-fit: cover; cursor: pointer;">
+             style="height:150px;width:100%;object-fit:cover;cursor:pointer;">
 
-        <!-- Category + Note -->
-        <p class="mt-2 mb-1">
-            <strong>{{ e.category if e.category else "General" }}</strong>
-        </p>
-        <p class="text-muted" style="font-size: 0.9rem;">
+        <p class="mt-2 mb-1 text-muted" style="font-size:0.85rem;">
             {{ e.note if e.note else "—" }}
         </p>
 
-        <!-- Delete Button -->
         <form method="POST"
               action="{{ url_for('main.delete_evidence', evidence_id=e.id) }}"
               onsubmit="return confirm('Delete this evidence?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-danger">Delete</button>
         </form>
-
     </div>
 
-    <!-- Fullscreen Modal -->
     <div class="modal fade" id="modal{{ e.id }}" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-
                 <div class="modal-body p-0">
-                    <img src="{{ url_for('static', filename=e.file_path) }}"
-                         class="w-100">
+                    <img src="{{ url_for('static', filename=e.file_path) }}" class="w-100">
                 </div>
-
                 <div class="modal-footer">
                     <span class="me-auto">{{ e.note if e.note else "" }}</span>
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
-
             </div>
         </div>
     </div>
-
     {% endfor %}
 </div>
-
 {% else %}
-<p class="text-muted">No evidence uploaded yet.</p>
+<div class="alert alert-info">No evidence uploaded yet for this violation.</div>
 {% endif %}
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

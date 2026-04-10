@@ -1,33 +1,97 @@
 {% extends "layout/base.html" %}
+
 {% block content %}
 <h2>All Inspections</h2>
 
-<table class="table table-bordered">
-    <thead>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
+
+{% if inspections %}
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-dark">
         <tr>
+            <th>#</th>
             <th>Date</th>
             <th>Vessel</th>
             <th>Inspector</th>
+            <th>Status</th>
+            <th>Violations</th>
             <th>Score</th>
-            <th>Override</th>
+            <th>Override Score</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for insp in inspections %}
         <tr>
+            <td>{{ insp.id }}</td>
             <td>{{ insp.date }}</td>
             <td>{{ insp.vessel.call_sign }}</td>
             <td>{{ insp.inspector.first_name }} {{ insp.inspector.last_name }}</td>
-            <td>{{ insp.final_score or insp.score }}</td>
             <td>
+                {% if insp.status == "draft" %}
+                    <span class="badge bg-secondary">Draft</span>
+                {% elif insp.status == "submitted" %}
+                    <span class="badge bg-primary">Submitted</span>
+                {% elif insp.status == "approved" %}
+                    <span class="badge bg-success">Approved</span>
+                {% elif insp.status == "rejected" %}
+                    <span class="badge bg-danger">Rejected</span>
+                {% endif %}
+            </td>
+            <td class="text-center">{{ insp.violations | length }}</td>
+            <td>
+                {% if insp.final_score is not none %}
+                    {% if insp.final_score >= 80 %}
+                        <span class="badge bg-success fs-6">{{ insp.final_score }}</span>
+                    {% elif insp.final_score >= 60 %}
+                        <span class="badge bg-warning text-dark fs-6">{{ insp.final_score }}</span>
+                    {% else %}
+                        <span class="badge bg-danger fs-6">{{ insp.final_score }}</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if insp.status == "submitted" %}
                 <form method="POST"
                       action="{{ url_for('main.admin_override_score', inspection_id=insp.id) }}">
-                    <input type="number" name="new_score" min="0" max="100" class="form-control mb-1">
-                    <button class="btn btn-sm btn-primary">Apply</button>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="new_score" min="0" max="100"
+                               class="form-control" style="width:70px;"
+                               value="{{ insp.final_score or insp.score }}">
+                        <button class="btn btn-success btn-sm">✔</button>
+                    </div>
                 </form>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+            <td class="d-flex gap-1">
+                <a href="{{ url_for('main.admin_inspection_detail', inspection_id=insp.id) }}"
+                   class="btn btn-sm btn-info">View</a>
+                {% if insp.status == "submitted" %}
+                <form method="POST"
+                      action="{{ url_for('main.admin_reject_inspection', inspection_id=insp.id) }}"
+                      onsubmit="return confirm('Reject this inspection?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-danger">Reject</button>
+                </form>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+{% else %}
+<div class="alert alert-info">No inspections recorded yet.</div>
+{% endif %}
 {% endblock %}

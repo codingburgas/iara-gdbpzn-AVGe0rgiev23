@@ -655,18 +655,12 @@ def upload_evidence(violation_id):
         return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
 
     if request.method == "POST":
-        file = request.files.get("file")
+        files = request.files.getlist("files")
         note = request.form.get("note")
 
-        if not file or file.filename == "":
-            flash("Please select a file.", "danger")
+        if not files or all(f.filename == "" for f in files):
+            flash("Please select at least one file.", "danger")
             return redirect(request.url)
-
-        if not allowed_evidence_file(file.filename):
-            flash("Invalid file type. Allowed: png, jpg, jpeg, gif", "danger")
-            return redirect(request.url)
-
-        filename = secure_filename(file.filename)
 
         violation_folder = os.path.join(
             EVIDENCE_UPLOAD_FOLDER,
@@ -675,21 +669,34 @@ def upload_evidence(violation_id):
         )
         os.makedirs(violation_folder, exist_ok=True)
 
-        file_path = os.path.join(violation_folder, filename)
-        file.save(file_path)
+        uploaded = 0
+        for file in files:
+            if file.filename == "":
+                continue
+            if not allowed_evidence_file(file.filename):
+                flash(f"Skipped {file.filename}: invalid type. Allowed: png, jpg, jpeg, gif", "warning")
+                continue
 
-        relative_path = f"uploads/evidence/{inspection.id}/{violation.id}/{filename}"
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(violation_folder, filename)
+            file.save(file_path)
 
-        evidence = Evidence(
-            violation_id=violation.id,
-            file_path=relative_path,
-            note=note
-        )
+            relative_path = f"uploads/evidence/{inspection.id}/{violation.id}/{filename}"
 
-        db.session.add(evidence)
-        db.session.commit()
+            evidence = Evidence(
+                violation_id=violation.id,
+                file_path=relative_path,
+                note=note
+            )
+            db.session.add(evidence)
+            uploaded += 1
 
-        flash("Evidence uploaded successfully!", "success")
+        if uploaded > 0:
+            db.session.commit()
+            flash(f"{uploaded} file(s) uploaded successfully!", "success")
+        else:
+            flash("No valid files were uploaded.", "danger")
+
         return redirect(url_for("main.evidence_list", violation_id=violation.id))
 
     return render_template(
@@ -848,6 +855,60 @@ def finalize_inspection(inspection_id):
 
     return render_template("inspections/finalize.html", inspection=inspection)
 
+
+@bp.route("/inspections/<int:inspection_id>/delete", methods=["POST"])
+@login_required
+def delete_inspection(inspection_id):
+    if current_user.role != "inspector":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+
+    if inspection.inspector_id != current_user.id:
+        abort(403)
+
+    if inspection.status in ["submitted", "approved"]:
+        flash("Cannot delete a submitted or approved inspection.", "danger")
+        return redirect(url_for("main.inspection_details", inspection_id=inspection.id))
+
+    for violation in inspection.violations:
+        for evidence in violation.evidence:
+            file_path = os.path.join(BASE_DIR, "static", evidence.file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+    db.session.delete(inspection)
+    db.session.commit()
+
+    flash("Inspection deleted.", "info")
+    return redirect(url_for("main.inspections_list"))
+
+
+@bp.route("/admin/inspections/<int:inspection_id>/detail")
+@login_required
+def admin_inspection_detail(inspection_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+    return render_template("admin/inspection_detail.html", inspection=inspection)
+
+
+@bp.route("/admin/inspections/<int:inspection_id>/reject", methods=["POST"])
+@login_required
+def admin_reject_inspection(inspection_id):
+    if current_user.role != "administrator":
+        abort(403)
+
+    inspection = Inspection.query.get_or_404(inspection_id)
+    inspection.status = "rejected"
+    inspection.rejected_at = datetime.utcnow()
+
+    db.session.commit()
+    flash("Inspection rejected.", "warning")
+    return redirect(url_for("main.admin_inspections"))
+
+
 @bp.route("/admin/vessels/<int:vessel_id>/inspections")
 @login_required
 def vessel_inspection_history(vessel_id):
@@ -911,7 +972,7 @@ def admin_violations():
     violations = Violation.query.order_by(Violation.created_at.desc()).all()
 
     return render_template(
-        "admin/violations_list.html",
+        "admin/violations.html",
         violations=violations
     )
 
@@ -966,9 +1027,11 @@ def admin_override_score(inspection_id):
     new_score = int(request.form.get("new_score"))
 
     inspection.final_score = new_score
+    inspection.status = "approved"
     inspection.approved_at = datetime.utcnow()
 
     db.session.commit()
+    flash("Inspection score overridden and approved.", "success")
     return redirect(url_for("main.admin_inspections"))
 
 
