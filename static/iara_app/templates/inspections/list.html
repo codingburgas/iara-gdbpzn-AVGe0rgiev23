@@ -1,0 +1,80 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>My Inspections</h2>
+    <a href="{{ url_for('main.create_inspection') }}" class="btn btn-primary">
+        + Start New Inspection
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
+
+{% if inspections %}
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>#</th>
+            <th>Vessel</th>
+            <th>Date</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Score</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for insp in inspections %}
+        <tr>
+            <td>{{ insp.id }}</td>
+            <td>{{ insp.vessel.call_sign }}</td>
+            <td>{{ insp.date }}</td>
+            <td>{{ insp.location }}</td>
+            <td>
+                {% if insp.status == "draft" %}
+                    <span class="badge bg-secondary">Draft</span>
+                {% elif insp.status == "submitted" %}
+                    <span class="badge bg-primary">Submitted</span>
+                {% elif insp.status == "approved" %}
+                    <span class="badge bg-success">Approved</span>
+                {% elif insp.status == "rejected" %}
+                    <span class="badge bg-danger">Rejected</span>
+                {% else %}
+                    <span class="badge bg-light text-dark">{{ insp.status }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if insp.final_score is not none %}
+                    {{ insp.final_score }}
+                {% else %}
+                    {{ insp.score }}
+                {% endif %}
+            </td>
+            <td class="d-flex gap-1">
+                <a href="{{ url_for('main.inspection_details', inspection_id=insp.id) }}"
+                   class="btn btn-sm btn-info">Open</a>
+
+                {% if insp.status == "draft" %}
+                <form method="POST"
+                      action="{{ url_for('main.delete_inspection', inspection_id=insp.id) }}"
+                      onsubmit="return confirm('Delete this inspection?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-danger">Delete</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">No inspections yet. Start one using the button above.</div>
+{% endif %}
+{% endblock %}

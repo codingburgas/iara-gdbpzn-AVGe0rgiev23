@@ -1,0 +1,43 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<h2>Inspector Performance</h2>
+
+{% if performance %}
+<table class="table table-bordered table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Inspector</th>
+            <th>Email</th>
+            <th>Total Inspections</th>
+            <th>Average Score</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in performance %}
+        <tr>
+            <td>{{ p.inspector.first_name }} {{ p.inspector.last_name }}</td>
+            <td>{{ p.inspector.email }}</td>
+            <td>{{ p.total_inspections }}</td>
+            <td>
+                {% if p.avg_score is not none %}
+                    {% set score = p.avg_score | round(1) %}
+                    {% if score >= 80 %}
+                        <span class="badge bg-success fs-6">{{ score }}</span>
+                    {% elif score >= 60 %}
+                        <span class="badge bg-warning text-dark fs-6">{{ score }}</span>
+                    {% else %}
+                        <span class="badge bg-danger fs-6">{{ score }}</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted">N/A</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">No inspectors registered yet.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Finalize Inspection #{{ inspection.id }}</h2>
+    <a href="{{ url_for('main.inspection_details', inspection_id=inspection.id) }}"
+       class="btn btn-secondary">← Back</a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-dark text-white">Inspection Summary</div>
+    <div class="card-body">
+
+        <p><strong>Vessel:</strong> {{ inspection.vessel.call_sign }} ({{ inspection.vessel.international_number }})</p>
+        <p><strong>Inspector:</strong> {{ inspection.inspector.first_name }} {{ inspection.inspector.last_name }}</p>
+        <p><strong>Date:</strong> {{ inspection.date }}</p>
+        <p><strong>Location:</strong> {{ inspection.location }}</p>
+        <p><strong>Permit Status at Inspection:</strong> {{ inspection.permit_status_snapshot }}</p>
+
+        <hr>
+
+        <h5>Violations ({{ inspection.violations | length }})</h5>
+
+        {% if inspection.violations %}
+        <table class="table table-sm table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Score Deduction</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in inspection.violations %}
+                <tr>
+                    <td>{{ v.violation_code.code if v.violation_code else "No Code" }}</td>
+                    <td>{{ v.severity }}</td>
+                    <td>{{ v.description or "—" }}</td>
+                    <td>
+                        {% if v.severity == "Low" %}-5
+                        {% elif v.severity == "Medium" %}-10
+                        {% elif v.severity == "High" %}-20
+                        {% elif v.severity == "Critical" %}-40
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No violations recorded. Score will remain 100.</p>
+        {% endif %}
+
+        <div class="alert alert-info mt-3">
+            <strong>Estimated Final Score:</strong> {{ inspection.score }} / 100
+        </div>
+
+        <hr>
+
+        <h5>Inspector Signature</h5>
+        <p class="text-muted">By signing, you confirm this inspection is complete and accurate.</p>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Type your full name to sign</label>
+                <input type="text" name="signature" class="form-control"
+                       placeholder="Full name" required>
+            </div>
+
+            <button class="btn btn-success btn-lg">✔ Submit Inspection</button>
+        </form>
+
+    </div>
+</div>
+{% endblock %}

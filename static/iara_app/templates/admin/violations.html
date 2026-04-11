@@ -1,0 +1,93 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<h2>All Violations</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
+
+{% if violations %}
+<table class="table table-striped table-bordered align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>Inspection</th>
+            <th>Vessel</th>
+            <th>Code</th>
+            <th>Severity</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Evidence</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in violations %}
+        <tr>
+            <td>
+                <a href="{{ url_for('main.admin_inspection_detail', inspection_id=v.inspection.id) }}">#{{ v.inspection.id }}</a>
+            </td>
+            <td>{{ v.inspection.vessel.call_sign }}</td>
+            <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
+            <td>
+                {% if v.severity == "Critical" %}
+                    <span class="badge bg-danger">Critical</span>
+                {% elif v.severity == "High" %}
+                    <span class="badge" style="background:#fd7e14">High</span>
+                {% elif v.severity == "Medium" %}
+                    <span class="badge bg-warning text-dark">Medium</span>
+                {% else %}
+                    <span class="badge bg-secondary">Low</span>
+                {% endif %}
+            </td>
+            <td>{{ v.description or "—" }}</td>
+            <td>
+                {% if v.status == "open" %}
+                    <span class="badge bg-danger">Open</span>
+                {% elif v.status == "corrected" %}
+                    <span class="badge bg-warning text-dark">Corrected</span>
+                {% elif v.status == "approved" %}
+                    <span class="badge bg-success">Approved</span>
+                {% elif v.status == "rejected" %}
+                    <span class="badge bg-secondary">Rejected</span>
+                {% else %}
+                    <span class="badge bg-light text-dark">{{ v.status }}</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                <a href="{{ url_for('main.admin_view_evidence', violation_id=v.id) }}"
+                   class="btn btn-sm btn-info">
+                    View ({{ v.evidence | length }})
+                </a>
+            </td>
+            <td>
+                {% if v.status == "corrected" %}
+                <form method="POST"
+                      action="{{ url_for('main.admin_approve_violation', violation_id=v.id) }}"
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-success btn-sm">Approve</button>
+                </form>
+                <form method="POST"
+                      action="{{ url_for('main.admin_reject_violation', violation_id=v.id) }}"
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-danger btn-sm">Reject</button>
+                </form>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">No violations recorded yet.</div>
+{% endif %}
+{% endblock %}

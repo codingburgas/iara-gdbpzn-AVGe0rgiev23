@@ -1,0 +1,56 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="card p-4 shadow-sm">
+    <h3 class="mb-3">Add New Vessel</h3>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                {{ form.international_number.label(class="form-label") }}
+                {{ form.international_number(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.call_sign.label(class="form-label") }}
+                {{ form.call_sign(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.marking.label(class="form-label") }}
+                {{ form.marking(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.engine_power.label(class="form-label") }}
+                {{ form.engine_power(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.length.label(class="form-label") }}
+                {{ form.length(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.width.label(class="form-label") }}
+                {{ form.width(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.owner_name.label(class="form-label") }}
+                {{ form.owner_name(class="form-control") }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                {{ form.captain_name.label(class="form-label") }}
+                {{ form.captain_name(class="form-control") }}
+            </div>
+        </div>
+
+        <button class="btn btn-primary mt-3">{{ form.submit.label.text }}</button>
+    </form>
+</div>
+
+{% endblock %}

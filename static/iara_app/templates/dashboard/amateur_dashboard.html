@@ -1,0 +1,10 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<h2 class="mb-3">Amateur Fisher Dashboard</h2>
+<p>Welcome, {{ current_user.first_name }}!</p>
+
+<div class="alert alert-warning">
+    View and manage your amateur fishing permit and personal information.
+</div>
+{% endblock %}

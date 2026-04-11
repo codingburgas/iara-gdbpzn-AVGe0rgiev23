@@ -1,0 +1,55 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="card p-4 shadow-sm">
+    <h3 class="mb-3">Vessel Details</h3>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>International Number:</strong>
+            <p>{{ vessel.international_number }}</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Call Sign:</strong>
+            <p>{{ vessel.call_sign }}</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Marking:</strong>
+            <p>{{ vessel.marking }}</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Engine Power:</strong>
+            <p>{{ vessel.engine_power }} HP</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Length:</strong>
+            <p>{{ vessel.length }} m</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Width:</strong>
+            <p>{{ vessel.width }} m</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Owner:</strong>
+            <p>{{ vessel.owner_name }}</p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <strong>Captain:</strong>
+            <p>{{ vessel.captain_name }}</p>
+        </div>
+    </div>
+
+    <a href="{{ url_for('main.vessel_inspection_history', vessel_id=vessel.id) }}"
+   class="btn btn-primary mt-3">View Inspection History</a>
+
+    <a href="/admin/vessels" class="btn btn-secondary mt-3">Back to List</a>
+</div>
+
+{% endblock %}

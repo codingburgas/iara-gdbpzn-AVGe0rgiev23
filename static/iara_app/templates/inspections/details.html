@@ -1,0 +1,142 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Inspection #{{ inspection.id }}</h2>
+    <a href="{{ url_for('main.inspections_list') }}" class="btn btn-secondary">← Back</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-dark text-white">Inspection Details</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Vessel:</strong> {{ inspection.vessel.call_sign }} ({{ inspection.vessel.international_number }})</p>
+                <p><strong>Date:</strong> {{ inspection.date }}</p>
+                <p><strong>Location:</strong> {{ inspection.location }}</p>
+                <p><strong>Permit Status at Inspection:</strong>
+                    {% if inspection.permit_status_snapshot == "Active" %}
+                        <span class="badge bg-success">{{ inspection.permit_status_snapshot }}</span>
+                    {% elif inspection.permit_status_snapshot == "Expired" %}
+                        <span class="badge bg-danger">{{ inspection.permit_status_snapshot }}</span>
+                    {% elif inspection.permit_status_snapshot == "No Permit" %}
+                        <span class="badge bg-dark">No Permit</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">{{ inspection.permit_status_snapshot }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Status:</strong>
+                    {% if inspection.status == "draft" %}
+                        <span class="badge bg-secondary">Draft</span>
+                    {% elif inspection.status == "submitted" %}
+                        <span class="badge bg-primary">Submitted</span>
+                    {% elif inspection.status == "approved" %}
+                        <span class="badge bg-success">Approved</span>
+                    {% elif inspection.status == "rejected" %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% endif %}
+                </p>
+                <p><strong>Current Score:</strong> {{ inspection.score }}</p>
+                {% if inspection.final_score is not none %}
+                <p><strong>Final Score:</strong> <strong class="text-success">{{ inspection.final_score }}</strong></p>
+                {% endif %}
+                {% if inspection.submitted_at %}
+                <p><strong>Submitted At:</strong> {{ inspection.submitted_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% endif %}
+                {% if inspection.inspector_signature %}
+                <p><strong>Signed By:</strong> {{ inspection.inspector_signature }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% if inspection.notes %}
+        <hr>
+        <p><strong>Notes:</strong> {{ inspection.notes }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Violations Summary -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <span>Violations ({{ inspection.violations | length }})</span>
+        {% if inspection.status == "draft" %}
+        <a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
+           class="btn btn-sm btn-dark">+ Add Violation</a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if inspection.violations %}
+        <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Evidence</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in inspection.violations %}
+                <tr>
+                    <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
+                    <td>
+                        {% if v.severity == "Critical" %}<span class="badge bg-danger">Critical</span>
+                        {% elif v.severity == "High" %}<span class="badge bg-orange" style="background:#fd7e14">High</span>
+                        {% elif v.severity == "Medium" %}<span class="badge bg-warning text-dark">Medium</span>
+                        {% else %}<span class="badge bg-secondary">Low</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ v.description or "—" }}</td>
+                    <td>
+                        {% if v.status == "open" %}<span class="badge bg-danger">Open</span>
+                        {% elif v.status == "corrected" %}<span class="badge bg-warning text-dark">Corrected</span>
+                        {% elif v.status == "approved" %}<span class="badge bg-success">Approved</span>
+                        {% elif v.status == "rejected" %}<span class="badge bg-secondary">Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ v.evidence | length }}</td>
+                    <td>
+                        <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                           class="btn btn-sm btn-info">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted mb-0">No violations recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="d-flex gap-2">
+    {% if inspection.status == "draft" %}
+        <a href="{{ url_for('main.finalize_inspection', inspection_id=inspection.id) }}"
+           class="btn btn-success">✔ Finalize & Submit</a>
+
+        <form method="POST"
+              action="{{ url_for('main.delete_inspection', inspection_id=inspection.id) }}"
+              onsubmit="return confirm('Permanently delete this inspection?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-danger">🗑 Delete Inspection</button>
+        </form>
+    {% endif %}
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
