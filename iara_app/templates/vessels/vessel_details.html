@@ -49,6 +49,8 @@
     <a href="{{ url_for('main.vessel_inspection_history', vessel_id=vessel.id) }}"
    class="btn btn-primary mt-3">View Inspection History</a>
 
+    <a href="{{ url_for('main.vessel_qr_print', vessel_id=vessel.id) }}"
+       class="btn btn-outline-dark mt-3" target="_blank">🔲 QR Code</a>
     <a href="/admin/vessels" class="btn btn-secondary mt-3">Back to List</a>
 </div>
 

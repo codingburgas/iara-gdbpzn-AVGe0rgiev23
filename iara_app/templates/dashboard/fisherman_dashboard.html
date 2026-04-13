@@ -1,9 +1,118 @@
 {% extends "layout/base.html" %}
 {% block content %}
+<h2 class="mb-4">Welcome, {{ current_user.first_name }}</h2>
 
-<div class="card p-4">
-    <h3>Welcome, Admin</h3>
-    <p>Use the sidebar to manage the system.</p>
+{% if expiring_soon %}
+<div class="alert alert-warning">
+  ⚠️ Your vessel's permit expires in {{ active_permit.days_until_expiry() }} days. Contact the authority to renew.
+</div>
+{% endif %}
+
+{% if vessel %}
+<div class="row g-3 mb-4">
+  <!-- Vessel Card -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-dark text-white">My Vessel</div>
+      <div class="card-body">
+        <h5>{{ vessel.call_sign }}</h5>
+        <p class="text-muted mb-1">{{ vessel.international_number }}</p>
+        <hr>
+        <p class="mb-1"><strong>Owner:</strong> {{ vessel.owner_name }}</p>
+        <p class="mb-1"><strong>Captain:</strong> {{ vessel.captain_name }}</p>
+        <p class="mb-1"><strong>Length:</strong> {{ vessel.length }}m</p>
+        <p class="mb-0"><strong>Engine:</strong> {{ vessel.engine_power }}HP</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permit Card -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-dark text-white">Active Permit</div>
+      <div class="card-body">
+        {% if active_permit %}
+          <h5>{{ active_permit.permit_number }}</h5>
+          <span class="badge bg-success mb-2">Active</span>
+          <p class="mb-1"><strong>Type:</strong> {{ active_permit.permit_type }}</p>
+          <p class="mb-1"><strong>Issued:</strong> {{ active_permit.issue_date }}</p>
+          <p class="mb-1"><strong>Expires:</strong> {{ active_permit.expiry_date }}</p>
+          {% set days = active_permit.days_until_expiry() %}
+          {% if days <= 30 %}
+            <div class="alert alert-warning py-1 mt-2 mb-0">Expires in {{ days }} days</div>
+          {% else %}
+            <div class="alert alert-success py-1 mt-2 mb-0">{{ days }} days remaining</div>
+          {% endif %}
+        {% else %}
+          <div class="alert alert-danger mb-0">No active permit on file. Contact the authority immediately.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Last Inspection Card -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-dark text-white">Last Inspection</div>
+      <div class="card-body">
+        {% if last_inspection %}
+          {% set score = last_inspection.final_score if last_inspection.final_score is not none else last_inspection.score %}
+          <div class="text-center mb-3">
+            <div class="display-4 fw-bold
+              {% if score >= 80 %}text-success
+              {% elif score >= 60 %}text-warning
+              {% else %}text-danger{% endif %}">{{ score }}</div>
+            <div class="text-muted">out of 100</div>
+          </div>
+          <p class="mb-1"><strong>Date:</strong> {{ last_inspection.date }}</p>
+          <p class="mb-1"><strong>Location:</strong> {{ last_inspection.location }}</p>
+          <p class="mb-0">
+            <strong>Status:</strong>
+            {% if last_inspection.status == "approved" %}<span class="badge bg-success">Approved</span>
+            {% elif last_inspection.status == "submitted" %}<span class="badge bg-primary">Under Review</span>
+            {% else %}<span class="badge bg-secondary">{{ last_inspection.status }}</span>
+            {% endif %}
+          </p>
+        {% else %}
+          <p class="text-muted">No inspections on record for your vessel.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- Open Violations -->
+{% if open_violations %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-danger text-white">Open Violations ({{ open_violations|length }})</div>
+  <div class="card-body p-0">
+    <table class="table table-bordered mb-0">
+      <thead class="table-light">
+        <tr><th>Code</th><th>Severity</th><th>Description</th><th>Recorded</th></tr>
+      </thead>
+      <tbody>
+        {% for v in open_violations %}
+        <tr>
+          <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
+          <td>
+            {% if v.severity == "Critical" %}<span class="badge bg-danger">Critical</span>
+            {% elif v.severity == "High" %}<span class="badge" style="background:#fd7e14">High</span>
+            {% elif v.severity == "Medium" %}<span class="badge bg-warning text-dark">Medium</span>
+            {% else %}<span class="badge bg-secondary">Low</span>{% endif %}
+          </td>
+          <td>{{ v.description or "—" }}</td>
+          <td>{{ v.created_at.strftime('%Y-%m-%d') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+  Your account is not linked to a vessel yet. Please contact the administrator and provide your vessel registration number.
+</div>
+{% endif %}
 {% endblock %}

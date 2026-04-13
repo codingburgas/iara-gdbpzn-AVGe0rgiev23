@@ -131,6 +131,8 @@ def admin_dashboard():
         Permit.expiry_date <= today + timedelta(days=30)
     ).count()
 
+    total_vessels = Vessel.query.count()
+
     return render_template(
         "dashboard/admin_dashboard.html",
         total_permits=total_permits,
@@ -138,6 +140,7 @@ def admin_dashboard():
         expired_permits=expired_permits,
         suspended_permits=suspended_permits,
         expiring_soon=expiring_soon,
+        total_vessels=total_vessels,
         title="Admin Dashboard"
     )
 
@@ -190,20 +193,7 @@ def inspector_dashboard():
     )
 
 
-@bp.route("/fisherman/dashboard")
-@login_required
-def fisherman_dashboard():
-    if current_user.role != "fisherman":
-        abort(403)
-    return render_template("dashboard/fisherman_dashboard.html")
 
-
-@bp.route("/amateur/dashboard")
-@login_required
-def amateur_dashboard():
-    if current_user.role != "amateur":
-        abort(403)
-    return render_template("dashboard/amateur_dashboard.html")
 
 
 # ============================================================
@@ -1142,3 +1132,716 @@ def renew_permit(permit_id):
         return redirect(url_for("main.permit_details", permit_id=permit.id))
 
     return render_template("permits/renew_permit.html", permit=permit, today=date.today().isoformat())
+
+
+# ============================================================
+# AUDIT LOG HELPER
+# ============================================================
+
+def log_action(action, target_type=None, target_id=None, detail=None):
+    from .models import AuditLog
+    try:
+        entry = AuditLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            action=action,
+            target_type=target_type,
+            target_id=target_id,
+            detail=detail,
+            ip_address=request.remote_addr
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
+        pass
+
+
+# ============================================================
+# QR CODE — PUBLIC VESSEL CARD
+# ============================================================
+
+@bp.route("/vessel/<int:vessel_id>/qr")
+@login_required
+def vessel_qr(vessel_id):
+    """Generate QR code PNG that encodes the vessel public card URL."""
+    import qrcode
+    import io
+    from flask import send_file
+    vessel = Vessel.query.get_or_404(vessel_id)
+    public_url = request.host_url.rstrip("/") + f"/public/vessel/{vessel.international_number}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(public_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png",
+                     download_name=f"vessel_{vessel.call_sign}_qr.png")
+
+
+@bp.route("/public/vessel/<string:international_number>")
+def public_vessel_card(international_number):
+    """Public vessel card — no login required. Shown when QR is scanned."""
+    vessel = Vessel.query.filter_by(international_number=international_number).first_or_404()
+    active_permit = Permit.query.filter_by(vessel_id=vessel.id, status="Active").first()
+    last_inspection = Inspection.query.filter_by(vessel_id=vessel.id)\
+        .order_by(Inspection.date.desc()).first()
+    open_violations = []
+    if last_inspection:
+        open_violations = [v for v in last_inspection.violations if v.status == "open"]
+    return render_template("public/vessel_card.html",
+                           vessel=vessel,
+                           active_permit=active_permit,
+                           last_inspection=last_inspection,
+                           open_violations=open_violations)
+
+
+# ============================================================
+# VESSEL QR PRINT PAGE (admin)
+# ============================================================
+
+@bp.route("/admin/vessels/<int:vessel_id>/qr-print")
+@login_required
+def vessel_qr_print(vessel_id):
+    if current_user.role != "administrator":
+        abort(403)
+    vessel = Vessel.query.get_or_404(vessel_id)
+    active_permit = Permit.query.filter_by(vessel_id=vessel.id, status="Active").first()
+    return render_template("admin/vessel_qr_print.html",
+                           vessel=vessel,
+                           active_permit=active_permit)
+
+
+# ============================================================
+# PDF INSPECTION REPORT EXPORT
+# ============================================================
+
+@bp.route("/inspections/<int:inspection_id>/pdf")
+@login_required
+def export_inspection_pdf(inspection_id):
+    if current_user.role not in ["inspector", "administrator"]:
+        abort(403)
+    inspection = Inspection.query.get_or_404(inspection_id)
+    if current_user.role == "inspector" and inspection.inspector_id != current_user.id:
+        abort(403)
+
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    import io
+    from flask import send_file
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=2*cm, rightMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+    title_style   = ParagraphStyle("title", parent=styles["Title"], fontSize=18, spaceAfter=4, textColor=colors.HexColor("#1e293b"))
+    subtitle_style = ParagraphStyle("sub",  parent=styles["Normal"], fontSize=10, textColor=colors.HexColor("#64748b"), spaceAfter=12)
+    heading_style  = ParagraphStyle("h2",   parent=styles["Heading2"], fontSize=12, textColor=colors.HexColor("#1e293b"), spaceBefore=14, spaceAfter=6)
+    body_style     = ParagraphStyle("body", parent=styles["Normal"], fontSize=10, leading=16)
+    small_style    = ParagraphStyle("small",parent=styles["Normal"], fontSize=8,  textColor=colors.HexColor("#64748b"))
+
+    NAVY  = colors.HexColor("#1e293b")
+    LIGHT = colors.HexColor("#f1f5f9")
+    RED   = colors.HexColor("#dc2626")
+    GREEN = colors.HexColor("#16a34a")
+
+    score = inspection.final_score if inspection.final_score is not None else inspection.score
+    score_color = GREEN if score >= 80 else (colors.HexColor("#d97706") if score >= 60 else RED)
+
+    story = []
+
+    # Header
+    story.append(Paragraph("IARA — Fisheries Inspection Authority", title_style))
+    story.append(Paragraph(f"Official Inspection Report  |  Report #{inspection.id:05d}", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=2, color=NAVY, spaceAfter=12))
+
+    # Status badge row
+    status_color = {"draft": "#94a3b8", "submitted": "#3b82f6",
+                    "approved": "#16a34a", "rejected": "#dc2626"}.get(inspection.status, "#94a3b8")
+    story.append(Paragraph(
+        f'Status: <font color="{status_color}"><b>{inspection.status.upper()}</b></font>'
+        f'&nbsp;&nbsp;&nbsp;Score: <font color="{score_color.hexval() if hasattr(score_color,"hexval") else "#16a34a"}"><b>{score}/100</b></font>',
+        body_style))
+    story.append(Spacer(1, 10))
+
+    # Vessel & Inspection info table
+    story.append(Paragraph("Inspection Details", heading_style))
+    info_data = [
+        ["Vessel Call Sign", inspection.vessel.call_sign,
+         "Int'l Number", inspection.vessel.international_number],
+        ["Owner", inspection.vessel.owner_name,
+         "Captain", inspection.vessel.captain_name],
+        ["Date", str(inspection.date),
+         "Location", inspection.location or "—"],
+        ["Inspector", f"{inspection.inspector.first_name} {inspection.inspector.last_name}",
+         "Permit at Inspection", inspection.permit_status_snapshot or "—"],
+        ["Submitted", inspection.submitted_at.strftime("%Y-%m-%d %H:%M") if inspection.submitted_at else "—",
+         "Signature", inspection.inspector_signature or "—"],
+    ]
+    info_table = Table(info_data, colWidths=[3.5*cm, 6*cm, 3.5*cm, 4*cm])
+    info_table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), LIGHT),
+        ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#e2e8f0")),
+        ("BACKGROUND", (2,0), (2,-1), colors.HexColor("#e2e8f0")),
+        ("FONTNAME",   (0,0), (0,-1), "Helvetica-Bold"),
+        ("FONTNAME",   (2,0), (2,-1), "Helvetica-Bold"),
+        ("FONTSIZE",   (0,0), (-1,-1), 9),
+        ("PADDING",    (0,0), (-1,-1), 6),
+        ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ("ROWBACKGROUNDS", (0,0), (-1,-1), [LIGHT, colors.white]),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 10))
+
+    # Violations
+    story.append(Paragraph(f"Violations ({len(inspection.violations)})", heading_style))
+    if inspection.violations:
+        sev_colors = {"Critical": "#dc2626", "High": "#ea580c",
+                      "Medium": "#d97706", "Low": "#64748b"}
+        viol_data = [["#", "Code", "Severity", "Description", "Status", "Deduction"]]
+        deduction_map = {"Low": 5, "Medium": 10, "High": 20, "Critical": 40}
+        for i, v in enumerate(inspection.violations, 1):
+            viol_data.append([
+                str(i),
+                v.violation_code.code if v.violation_code else "—",
+                v.severity or "—",
+                (v.description or "—")[:60] + ("…" if v.description and len(v.description) > 60 else ""),
+                v.status.upper(),
+                f"-{deduction_map.get(v.severity, 10)}"
+            ])
+        viol_table = Table(viol_data, colWidths=[0.6*cm, 2*cm, 2.2*cm, 7.5*cm, 2.2*cm, 2*cm])
+        viol_style = TableStyle([
+            ("BACKGROUND",  (0,0), (-1,0), NAVY),
+            ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
+            ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",    (0,0), (-1,-1), 8),
+            ("PADDING",     (0,0), (-1,-1), 5),
+            ("GRID",        (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, LIGHT]),
+            ("ALIGN",       (0,0), (0,-1), "CENTER"),
+            ("ALIGN",       (-1,0), (-1,-1), "CENTER"),
+        ])
+        viol_table.setStyle(viol_style)
+        story.append(viol_table)
+    else:
+        story.append(Paragraph("No violations recorded.", body_style))
+
+    story.append(Spacer(1, 14))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cbd5e1"), spaceAfter=8))
+
+    # Notes
+    if inspection.notes:
+        story.append(Paragraph("Inspector Notes", heading_style))
+        story.append(Paragraph(inspection.notes, body_style))
+        story.append(Spacer(1, 8))
+
+    # Score breakdown
+    story.append(Paragraph("Score Summary", heading_style))
+    total_ded = sum({"Low":5,"Medium":10,"High":20,"Critical":40}.get(v.severity,10)
+                    for v in inspection.violations)
+    score_data = [
+        ["Base Score", "Total Deduction", "Final Score"],
+        ["100", f"-{total_ded}", str(score)],
+    ]
+    score_table = Table(score_data, colWidths=[5.5*cm, 5.5*cm, 5.5*cm])
+    score_table.setStyle(TableStyle([
+        ("BACKGROUND",  (0,0), (-1,0), NAVY),
+        ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
+        ("FONTNAME",    (0,0), (-1,-1), "Helvetica-Bold"),
+        ("FONTSIZE",    (0,0), (-1,-1), 11),
+        ("ALIGN",       (0,0), (-1,-1), "CENTER"),
+        ("PADDING",     (0,0), (-1,-1), 10),
+        ("GRID",        (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+    ]))
+    story.append(score_table)
+
+    # Footer
+    story.append(Spacer(1, 20))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cbd5e1"), spaceAfter=6))
+    story.append(Paragraph(
+        f"Generated by IARA System on {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC  |  "
+        f"This is an official document. Unauthorized alteration is prohibited.",
+        small_style))
+
+    doc.build(story)
+    buf.seek(0)
+
+    log_action("export_pdf", "Inspection", inspection.id)
+    return send_file(buf, mimetype="application/pdf",
+                     download_name=f"inspection_{inspection.id:05d}_report.pdf")
+
+
+# ============================================================
+# INSPECTION SCHEDULING (ADMIN)
+# ============================================================
+
+@bp.route("/admin/schedule")
+@login_required
+def schedule_list():
+    if current_user.role != "administrator":
+        abort(403)
+    from .models import ScheduledInspection
+    schedules = ScheduledInspection.query.order_by(
+        ScheduledInspection.scheduled_date.asc()
+    ).all()
+    inspectors = User.query.filter_by(role="inspector").all()
+    vessels = Vessel.query.all()
+    return render_template("admin/schedule.html",
+                           schedules=schedules,
+                           inspectors=inspectors,
+                           vessels=vessels,
+                           today=date.today())
+
+
+@bp.route("/admin/schedule/create", methods=["POST"])
+@login_required
+def schedule_create():
+    if current_user.role != "administrator":
+        abort(403)
+    from .models import ScheduledInspection
+    vessel_id    = request.form.get("vessel_id")
+    inspector_id = request.form.get("inspector_id")
+    sched_date   = request.form.get("scheduled_date")
+    sched_time   = request.form.get("scheduled_time", "09:00")
+    location     = request.form.get("location")
+    notes        = request.form.get("notes")
+
+    if not all([vessel_id, inspector_id, sched_date]):
+        flash("Vessel, Inspector and Date are required.", "danger")
+        return redirect(url_for("main.schedule_list"))
+
+    si = ScheduledInspection(
+        vessel_id=int(vessel_id),
+        inspector_id=int(inspector_id),
+        scheduled_date=date.fromisoformat(sched_date),
+        scheduled_time=sched_time,
+        location=location,
+        notes=notes,
+        created_by_id=current_user.id,
+        status="pending"
+    )
+    db.session.add(si)
+    db.session.commit()
+    log_action("schedule_inspection", "ScheduledInspection", si.id,
+               f"Vessel {vessel_id} → Inspector {inspector_id} on {sched_date}")
+    flash("Inspection scheduled successfully!", "success")
+    return redirect(url_for("main.schedule_list"))
+
+
+@bp.route("/admin/schedule/<int:si_id>/cancel", methods=["POST"])
+@login_required
+def schedule_cancel(si_id):
+    if current_user.role != "administrator":
+        abort(403)
+    from .models import ScheduledInspection
+    si = ScheduledInspection.query.get_or_404(si_id)
+    si.status = "cancelled"
+    db.session.commit()
+    flash("Scheduled inspection cancelled.", "warning")
+    return redirect(url_for("main.schedule_list"))
+
+
+@bp.route("/inspector/schedule")
+@login_required
+def inspector_schedule():
+    if current_user.role != "inspector":
+        abort(403)
+    from .models import ScheduledInspection
+    schedules = ScheduledInspection.query.filter_by(
+        inspector_id=current_user.id
+    ).filter(
+        ScheduledInspection.status.in_(["pending", "accepted"])
+    ).order_by(ScheduledInspection.scheduled_date.asc()).all()
+    return render_template("inspections/schedule.html", schedules=schedules, today=date.today())
+
+
+@bp.route("/inspector/schedule/<int:si_id>/accept", methods=["POST"])
+@login_required
+def schedule_accept(si_id):
+    if current_user.role != "inspector":
+        abort(403)
+    from .models import ScheduledInspection
+    si = ScheduledInspection.query.get_or_404(si_id)
+    if si.inspector_id != current_user.id:
+        abort(403)
+    si.status = "accepted"
+    db.session.commit()
+    flash("Inspection accepted and added to your queue.", "success")
+    return redirect(url_for("main.inspector_schedule"))
+
+
+@bp.route("/inspector/schedule/<int:si_id>/start", methods=["POST"])
+@login_required
+def schedule_start(si_id):
+    """Convert a scheduled inspection into a real Inspection (draft)."""
+    if current_user.role != "inspector":
+        abort(403)
+    from .models import ScheduledInspection
+    si = ScheduledInspection.query.get_or_404(si_id)
+    if si.inspector_id != current_user.id:
+        abort(403)
+
+    permit = Permit.query.filter_by(vessel_id=si.vessel_id)\
+        .order_by(Permit.expiry_date.desc()).first()
+    permit_status = permit.status if permit else "No Permit"
+
+    insp = Inspection(
+        vessel_id=si.vessel_id,
+        inspector_id=current_user.id,
+        location=si.location,
+        notes=si.notes,
+        permit_status_snapshot=permit_status,
+        date=date.today()
+    )
+    db.session.add(insp)
+    db.session.flush()
+
+    si.status = "completed"
+    si.inspection_id = insp.id
+    db.session.commit()
+
+    flash("Inspection started from schedule!", "success")
+    return redirect(url_for("main.inspection_details", inspection_id=insp.id))
+
+
+# ============================================================
+# REST API  (v1) — JWT protected
+# ============================================================
+
+from functools import wraps
+import hmac, hashlib, base64, json as _json
+
+API_SECRET = "iara-api-secret-change-in-production"
+
+def _make_token(user_id, role):
+    payload = _json.dumps({"uid": user_id, "role": role}).encode()
+    sig = hmac.new(API_SECRET.encode(), payload, hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(payload).decode() + "." + \
+           base64.urlsafe_b64encode(sig).decode()
+
+def _verify_token(token):
+    try:
+        payload_b64, sig_b64 = token.split(".")
+        payload = base64.urlsafe_b64decode(payload_b64)
+        sig     = base64.urlsafe_b64decode(sig_b64)
+        expected = hmac.new(API_SECRET.encode(), payload, hashlib.sha256).digest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        return _json.loads(payload)
+    except Exception:
+        return None
+
+def api_login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return {"error": "Missing or invalid Authorization header"}, 401
+        token = auth[7:]
+        claims = _verify_token(token)
+        if not claims:
+            return {"error": "Invalid or expired token"}, 401
+        request.api_user = claims
+        return f(*args, **kwargs)
+    return decorated
+
+def api_role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth = request.headers.get("Authorization", "")
+            if not auth.startswith("Bearer "):
+                return {"error": "Unauthorized"}, 401
+            claims = _verify_token(auth[7:])
+            if not claims or claims.get("role") not in roles:
+                return {"error": "Forbidden"}, 403
+            request.api_user = claims
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+
+@bp.route("/api/v1/auth/token", methods=["POST"])
+def api_get_token():
+    """POST {email, password} → {token, role}"""
+    data = request.get_json(silent=True) or {}
+    email    = data.get("email", "")
+    password = data.get("password", "")
+    user = User.query.filter_by(email=email).first()
+    if not user or not user.check_password(password):
+        return {"error": "Invalid credentials"}, 401
+    token = _make_token(user.id, user.role)
+    return {"token": token, "role": user.role, "name": f"{user.first_name} {user.last_name}"}
+
+
+@bp.route("/api/v1/vessels", methods=["GET"])
+@api_login_required
+def api_vessels():
+    vessels = Vessel.query.all()
+    return {"vessels": [
+        {"id": v.id, "call_sign": v.call_sign,
+         "international_number": v.international_number,
+         "owner": v.owner_name, "captain": v.captain_name,
+         "length": v.length, "engine_power": v.engine_power}
+        for v in vessels
+    ]}
+
+
+@bp.route("/api/v1/vessels/<int:vessel_id>", methods=["GET"])
+@api_login_required
+def api_vessel_detail(vessel_id):
+    v = Vessel.query.get_or_404(vessel_id)
+    active_permit = Permit.query.filter_by(vessel_id=v.id, status="Active").first()
+    last_insp = Inspection.query.filter_by(vessel_id=v.id)\
+        .order_by(Inspection.date.desc()).first()
+    return {
+        "id": v.id,
+        "call_sign": v.call_sign,
+        "international_number": v.international_number,
+        "marking": v.marking,
+        "owner": v.owner_name,
+        "captain": v.captain_name,
+        "length": v.length,
+        "width": v.width,
+        "engine_power": v.engine_power,
+        "active_permit": {
+            "number": active_permit.permit_number,
+            "type": active_permit.permit_type,
+            "expiry": str(active_permit.expiry_date),
+            "status": active_permit.status
+        } if active_permit else None,
+        "last_inspection": {
+            "id": last_insp.id,
+            "date": str(last_insp.date),
+            "score": last_insp.final_score or last_insp.score,
+            "status": last_insp.status
+        } if last_insp else None
+    }
+
+
+@bp.route("/api/v1/permits/<int:vessel_id>", methods=["GET"])
+@api_login_required
+def api_vessel_permits(vessel_id):
+    vessel = Vessel.query.get_or_404(vessel_id)
+    return {"vessel": vessel.call_sign, "permits": [
+        {"id": p.id, "number": p.permit_number, "type": p.permit_type,
+         "status": p.status, "issue_date": str(p.issue_date),
+         "expiry_date": str(p.expiry_date)}
+        for p in vessel.permits
+    ]}
+
+
+@bp.route("/api/v1/inspections", methods=["GET"])
+@api_login_required
+def api_inspections():
+    claims = request.api_user
+    if claims["role"] == "inspector":
+        inspections = Inspection.query.filter_by(inspector_id=claims["uid"])\
+            .order_by(Inspection.date.desc()).limit(50).all()
+    else:
+        inspections = Inspection.query.order_by(Inspection.date.desc()).limit(50).all()
+    return {"inspections": [
+        {"id": i.id, "vessel": i.vessel.call_sign,
+         "date": str(i.date), "status": i.status,
+         "score": i.final_score or i.score,
+         "violations": len(i.violations)}
+        for i in inspections
+    ]}
+
+
+@bp.route("/api/v1/inspections/create", methods=["POST"])
+@api_role_required("inspector", "administrator")
+def api_create_inspection():
+    data = request.get_json(silent=True) or {}
+    vessel_id = data.get("vessel_id")
+    location  = data.get("location")
+    notes     = data.get("notes", "")
+    if not vessel_id:
+        return {"error": "vessel_id required"}, 400
+    vessel = Vessel.query.get(vessel_id)
+    if not vessel:
+        return {"error": "Vessel not found"}, 404
+    permit = Permit.query.filter_by(vessel_id=vessel_id)\
+        .order_by(Permit.expiry_date.desc()).first()
+    insp = Inspection(
+        vessel_id=vessel_id,
+        inspector_id=request.api_user["uid"],
+        location=location,
+        notes=notes,
+        permit_status_snapshot=permit.status if permit else "No Permit",
+        date=date.today()
+    )
+    db.session.add(insp)
+    db.session.commit()
+    return {"id": insp.id, "status": "draft", "vessel": vessel.call_sign}, 201
+
+
+@bp.route("/api/v1/inspections/<int:inspection_id>", methods=["GET"])
+@api_login_required
+def api_inspection_detail(inspection_id):
+    i = Inspection.query.get_or_404(inspection_id)
+    return {
+        "id": i.id,
+        "vessel": {"id": i.vessel.id, "call_sign": i.vessel.call_sign},
+        "date": str(i.date),
+        "location": i.location,
+        "status": i.status,
+        "score": i.final_score or i.score,
+        "permit_status": i.permit_status_snapshot,
+        "violations": [
+            {"id": v.id, "code": v.violation_code.code if v.violation_code else None,
+             "severity": v.severity, "description": v.description, "status": v.status}
+            for v in i.violations
+        ]
+    }
+
+
+@bp.route("/api/v1/stats", methods=["GET"])
+@api_role_required("administrator")
+def api_stats():
+    from sqlalchemy import func
+    total_vessels     = Vessel.query.count()
+    total_permits     = Permit.query.count()
+    active_permits    = Permit.query.filter_by(status="Active").count()
+    total_inspections = Inspection.query.count()
+    total_violations  = Violation.query.count()
+    open_violations   = Violation.query.filter_by(status="open").count()
+    avg_score = db.session.query(func.avg(Inspection.final_score))\
+        .filter(Inspection.final_score.isnot(None)).scalar()
+    return {
+        "vessels": total_vessels,
+        "permits": {"total": total_permits, "active": active_permits},
+        "inspections": total_inspections,
+        "violations": {"total": total_violations, "open": open_violations},
+        "average_score": round(float(avg_score), 1) if avg_score else None
+    }
+
+
+# ============================================================
+# AUDIT LOG (ADMIN)
+# ============================================================
+
+@bp.route("/admin/audit-log")
+@login_required
+def audit_log():
+    if current_user.role != "administrator":
+        abort(403)
+    from .models import AuditLog
+    logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(200).all()
+    return render_template("admin/audit_log.html", logs=logs)
+
+
+# ============================================================
+# ADMIN DASHBOARD (enhanced — pass chart data)
+# ============================================================
+
+@bp.route("/admin/dashboard/data")
+@login_required
+def admin_dashboard_data():
+    """JSON endpoint for Chart.js on the admin dashboard."""
+    if current_user.role != "administrator":
+        abort(403)
+    from sqlalchemy import func, extract
+
+    # Inspections per month (last 6 months)
+    from datetime import timedelta
+    six_months_ago = date.today() - timedelta(days=180)
+    monthly = db.session.query(
+        extract("month", Inspection.date).label("month"),
+        extract("year",  Inspection.date).label("year"),
+        func.count(Inspection.id).label("count")
+    ).filter(Inspection.date >= six_months_ago)\
+     .group_by("year", "month")\
+     .order_by("year", "month").all()
+
+    # Violations by severity
+    sev_counts = db.session.query(
+        Violation.severity, func.count(Violation.id)
+    ).group_by(Violation.severity).all()
+
+    # Permit status breakdown
+    permit_statuses = db.session.query(
+        Permit.status, func.count(Permit.id)
+    ).group_by(Permit.status).all()
+
+    # Average score trend (last 10 completed inspections)
+    scores = db.session.query(Inspection.final_score, Inspection.date)\
+        .filter(Inspection.final_score.isnot(None))\
+        .order_by(Inspection.date.desc()).limit(10).all()
+    scores = list(reversed(scores))
+
+    return {
+        "monthly_inspections": [
+            {"label": f"{int(r.month):02d}/{int(r.year)}", "count": r.count}
+            for r in monthly
+        ],
+        "violations_by_severity": [
+            {"severity": r[0], "count": r[1]} for r in sev_counts
+        ],
+        "permit_status": [
+            {"status": r[0], "count": r[1]} for r in permit_statuses
+        ],
+        "score_trend": [
+            {"date": str(r[1]), "score": r[0]} for r in scores
+        ]
+    }
+
+
+# ============================================================
+# FISHERMAN DASHBOARD (enhanced)
+# ============================================================
+
+@bp.route("/fisherman/dashboard")
+@login_required
+def fisherman_dashboard():
+    if current_user.role != "fisherman":
+        abort(403)
+
+    # Find vessel linked to this fisherman via vessel_registration or permit number
+    vessel = None
+    if current_user.vessel_registration:
+        vessel = Vessel.query.filter_by(
+            international_number=current_user.vessel_registration
+        ).first()
+
+    active_permit = None
+    last_inspection = None
+    open_violations = []
+    expiring_soon = False
+
+    if vessel:
+        active_permit = Permit.query.filter_by(
+            vessel_id=vessel.id, status="Active"
+        ).first()
+        if active_permit:
+            expiring_soon = active_permit.days_until_expiry() <= 30
+
+        last_inspection = Inspection.query.filter_by(vessel_id=vessel.id)\
+            .order_by(Inspection.date.desc()).first()
+        if last_inspection:
+            open_violations = [v for v in last_inspection.violations if v.status == "open"]
+
+    return render_template("dashboard/fisherman_dashboard.html",
+                           vessel=vessel,
+                           active_permit=active_permit,
+                           last_inspection=last_inspection,
+                           open_violations=open_violations,
+                           expiring_soon=expiring_soon)
+
+
+# ============================================================
+# AMATEUR DASHBOARD (enhanced)
+# ============================================================
+
+@bp.route("/amateur/dashboard")
+@login_required
+def amateur_dashboard():
+    if current_user.role != "amateur":
+        abort(403)
+    return render_template("dashboard/amateur_dashboard.html")

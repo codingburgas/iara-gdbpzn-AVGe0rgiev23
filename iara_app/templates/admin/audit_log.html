@@ -1,0 +1,43 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<h2 class="mb-4">Audit Log</h2>
+
+{% if logs %}
+<table class="table table-bordered table-hover table-sm align-middle">
+  <thead class="table-dark">
+    <tr>
+      <th>Timestamp</th>
+      <th>User</th>
+      <th>Action</th>
+      <th>Target</th>
+      <th>Detail</th>
+      <th>IP</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for log in logs %}
+    <tr>
+      <td style="white-space:nowrap;font-size:.85rem;">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>
+        {% if log.user %}
+          <span class="badge bg-secondary">{{ log.user.role }}</span>
+          {{ log.user.first_name }} {{ log.user.last_name }}
+        {% else %}—{% endif %}
+      </td>
+      <td><code>{{ log.action }}</code></td>
+      <td>
+        {% if log.target_type %}
+          <span class="badge bg-light text-dark border">{{ log.target_type }}</span>
+          #{{ log.target_id }}
+        {% else %}—{% endif %}
+      </td>
+      <td style="font-size:.85rem; color:var(--bs-secondary);">{{ log.detail or "—" }}</td>
+      <td style="font-size:.8rem;">{{ log.ip_address or "—" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">No audit log entries yet.</div>
+{% endif %}
+{% endblock %}

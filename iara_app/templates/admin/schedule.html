@@ -1,0 +1,122 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Inspection Schedule</h2>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show">
+      {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<!-- Create New Scheduled Inspection -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white fw-bold">Schedule New Inspection</div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('main.schedule_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Vessel</label>
+          <select name="vessel_id" class="form-select" required>
+            <option value="">— Select vessel —</option>
+            {% for v in vessels %}
+            <option value="{{ v.id }}">{{ v.call_sign }} ({{ v.international_number }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Inspector</label>
+          <select name="inspector_id" class="form-select" required>
+            <option value="">— Select inspector —</option>
+            {% for i in inspectors %}
+            <option value="{{ i.id }}">{{ i.first_name }} {{ i.last_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Date</label>
+          <input type="date" name="scheduled_date" class="form-control" required min="{{ today }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Time</label>
+          <input type="time" name="scheduled_time" class="form-control" value="09:00">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Location</label>
+          <input type="text" name="location" class="form-control" placeholder="Port / Dock">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-bold">Notes (optional)</label>
+          <input type="text" name="notes" class="form-control" placeholder="Additional instructions...">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">+ Schedule Inspection</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule Table -->
+<div class="card shadow-sm">
+  <div class="card-header bg-dark text-white fw-bold">All Scheduled Inspections</div>
+  <div class="card-body p-0">
+    {% if schedules %}
+    <table class="table table-bordered table-hover mb-0 align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Date / Time</th>
+          <th>Vessel</th>
+          <th>Inspector</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Inspection</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in schedules %}
+        <tr>
+          <td>
+            <strong>{{ s.scheduled_date }}</strong><br>
+            <small class="text-muted">{{ s.scheduled_time or "—" }}</small>
+          </td>
+          <td>{{ s.vessel.call_sign }}</td>
+          <td>{{ s.assigned_inspector.first_name }} {{ s.assigned_inspector.last_name }}</td>
+          <td>{{ s.location or "—" }}</td>
+          <td>
+            {% if s.status == "pending" %}<span class="badge bg-warning text-dark">Pending</span>
+            {% elif s.status == "accepted" %}<span class="badge bg-primary">Accepted</span>
+            {% elif s.status == "completed" %}<span class="badge bg-success">Completed</span>
+            {% elif s.status == "cancelled" %}<span class="badge bg-secondary">Cancelled</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if s.inspection_id %}
+              <a href="{{ url_for('main.admin_inspection_detail', inspection_id=s.inspection_id) }}"
+                 class="btn btn-sm btn-info">View</a>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.status not in ["completed", "cancelled"] %}
+            <form method="POST" action="{{ url_for('main.schedule_cancel', si_id=s.id) }}"
+                  onsubmit="return confirm('Cancel this scheduled inspection?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-danger">Cancel</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-4"><div class="alert alert-info mb-0">No inspections scheduled yet.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

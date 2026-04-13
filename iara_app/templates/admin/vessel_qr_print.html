@@ -1,0 +1,48 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>QR Code — {{ vessel.call_sign }}</h2>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-primary">🖨 Print</button>
+    <a href="{{ url_for('main.vessel_qr', vessel_id=vessel.id) }}" download class="btn btn-secondary">⬇ Download PNG</a>
+    <a href="{{ url_for('main.vessel_details', vessel_id=vessel.id) }}" class="btn btn-outline-secondary">← Back</a>
+  </div>
+</div>
+
+<div class="card shadow-sm p-4 text-center" style="max-width:400px; margin:auto;">
+  <div style="background:#1e293b; color:white; padding:14px; border-radius:8px 8px 0 0; margin:-1.5rem -1.5rem 1rem -1.5rem;">
+    <div style="font-size:.7rem;letter-spacing:.12em;opacity:.7;">IARA — FISHERIES INSPECTION AUTHORITY</div>
+    <h4 class="mb-0 mt-1">{{ vessel.call_sign }}</h4>
+  </div>
+
+  <img src="{{ url_for('main.vessel_qr', vessel_id=vessel.id) }}"
+       alt="QR Code for {{ vessel.call_sign }}"
+       style="width:220px; height:220px; margin:16px auto; display:block;">
+
+  <p class="text-muted mb-1" style="font-size:.85rem;">Scan to view vessel details &amp; permit status</p>
+  <code style="font-size:.75rem;">{{ vessel.international_number }}</code>
+
+  <hr class="my-3">
+  <div class="row text-start" style="font-size:.85rem;">
+    <div class="col-6"><strong>Owner:</strong> {{ vessel.owner_name }}</div>
+    <div class="col-6"><strong>Captain:</strong> {{ vessel.captain_name }}</div>
+    <div class="col-6 mt-2"><strong>Length:</strong> {{ vessel.length }}m</div>
+    <div class="col-6 mt-2"><strong>Engine:</strong> {{ vessel.engine_power }}HP</div>
+    {% if active_permit %}
+    <div class="col-12 mt-2">
+      <strong>Permit:</strong> {{ active_permit.permit_number }}
+      <span class="badge bg-success ms-1">Active until {{ active_permit.expiry_date }}</span>
+    </div>
+    {% else %}
+    <div class="col-12 mt-2"><span class="badge bg-danger">No Active Permit</span></div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+@media print {
+  .sidebar, .topbar, .d-flex.justify-content-between { display: none !important; }
+  .content { margin-left: 0 !important; }
+}
+</style>
+{% endblock %}

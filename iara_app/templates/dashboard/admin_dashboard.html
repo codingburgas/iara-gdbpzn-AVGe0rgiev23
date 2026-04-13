@@ -3,48 +3,140 @@
 
 <h2 class="mb-4">Administrator Dashboard</h2>
 
-<div class="row g-4">
-
-    <!-- Total Permits -->
-    <div class="col-md-3">
-        <div class="card shadow-sm p-3 text-center">
-            <h5>Total Permits</h5>
-            <h2 class="text-primary">{{ total_permits }}</h2>
-        </div>
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-2">
+    <div class="card shadow-sm p-3 text-center border-0" style="background:#e0f2fe;">
+      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#0369a1;">Total Permits</div>
+      <div class="fw-bold" style="font-size:2rem;color:#0369a1;">{{ total_permits }}</div>
     </div>
-
-    <!-- Active -->
-    <div class="col-md-3">
-        <div class="card shadow-sm p-3 text-center">
-            <h5>Active</h5>
-            <h2 class="text-success">{{ active_permits }}</h2>
-        </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card shadow-sm p-3 text-center border-0" style="background:#dcfce7;">
+      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#15803d;">Active</div>
+      <div class="fw-bold" style="font-size:2rem;color:#15803d;">{{ active_permits }}</div>
     </div>
-
-    <!-- Expired -->
-    <div class="col-md-3">
-        <div class="card shadow-sm p-3 text-center">
-            <h5>Expired</h5>
-            <h2 class="text-danger">{{ expired_permits }}</h2>
-        </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card shadow-sm p-3 text-center border-0" style="background:#fee2e2;">
+      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;">Expired</div>
+      <div class="fw-bold" style="font-size:2rem;color:#dc2626;">{{ expired_permits }}</div>
     </div>
-
-    <!-- Suspended -->
-    <div class="col-md-3">
-        <div class="card shadow-sm p-3 text-center">
-            <h5>Suspended</h5>
-            <h2 class="text-warning">{{ suspended_permits }}</h2>
-        </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card shadow-sm p-3 text-center border-0" style="background:#fef9c3;">
+      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#b45309;">Suspended</div>
+      <div class="fw-bold" style="font-size:2rem;color:#b45309;">{{ suspended_permits }}</div>
     </div>
-
-    <!-- Expiring Soon -->
-    <div class="col-md-4 mt-4">
-        <div class="card shadow-sm p-3 text-center">
-            <h5>Expiring in Next 30 Days</h5>
-            <h2 class="text-info">{{ expiring_soon }}</h2>
-        </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card shadow-sm p-3 text-center border-0" style="background:#fce7f3;">
+      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#be185d;">Expiring Soon</div>
+      <div class="fw-bold" style="font-size:2rem;color:#be185d;">{{ expiring_soon }}</div>
     </div>
-
+  </div>
+  <div class="col-md-2">
+    <div class="card shadow-sm p-3 text-center border-0" style="background:#f0fdf4;">
+      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#166534;">Vessels</div>
+      <div class="fw-bold" style="font-size:2rem;color:#166534;">{{ total_vessels }}</div>
+    </div>
+  </div>
 </div>
 
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-5">
+    <div class="card shadow-sm p-3">
+      <h6 class="text-muted mb-3">Inspections per Month</h6>
+      <canvas id="monthlyChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm p-3">
+      <h6 class="text-muted mb-3">Violations by Severity</h6>
+      <canvas id="severityChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3">
+      <h6 class="text-muted mb-3">Score Trend (last 10)</h6>
+      <canvas id="scoreChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row g-3">
+  <div class="col-md-3">
+    <a href="{{ url_for('main.admin_inspections') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
+      <div style="font-size:1.5rem;">🔍</div>
+      <div><strong>Inspections</strong><br><small class="text-muted">View &amp; manage all</small></div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('main.schedule_list') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
+      <div style="font-size:1.5rem;">📅</div>
+      <div><strong>Schedule</strong><br><small class="text-muted">Assign inspectors</small></div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('main.admin_violations') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
+      <div style="font-size:1.5rem;">⚠️</div>
+      <div><strong>Violations</strong><br><small class="text-muted">Review &amp; approve</small></div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('main.audit_log') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
+      <div style="font-size:1.5rem;">📋</div>
+      <div><strong>Audit Log</strong><br><small class="text-muted">System activity</small></div>
+    </a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+fetch("{{ url_for('main.admin_dashboard_data') }}")
+  .then(r => r.json())
+  .then(data => {
+
+    // Monthly inspections bar chart
+    new Chart(document.getElementById("monthlyChart"), {
+      type: "bar",
+      data: {
+        labels: data.monthly_inspections.map(d => d.label),
+        datasets: [{ label: "Inspections", data: data.monthly_inspections.map(d => d.count),
+          backgroundColor: "#3b82f6", borderRadius: 4 }]
+      },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+
+    // Severity doughnut
+    const sevColors = { Critical: "#dc2626", High: "#ea580c", Medium: "#d97706", Low: "#94a3b8" };
+    new Chart(document.getElementById("severityChart"), {
+      type: "doughnut",
+      data: {
+        labels: data.violations_by_severity.map(d => d.severity),
+        datasets: [{ data: data.violations_by_severity.map(d => d.count),
+          backgroundColor: data.violations_by_severity.map(d => sevColors[d.severity] || "#ccc") }]
+      },
+      options: { plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, cutout: "65%" }
+    });
+
+    // Score trend line
+    new Chart(document.getElementById("scoreChart"), {
+      type: "line",
+      data: {
+        labels: data.score_trend.map(d => d.date),
+        datasets: [{ label: "Score", data: data.score_trend.map(d => d.score),
+          borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,.1)",
+          tension: 0.3, fill: true, pointRadius: 4 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { min: 0, max: 100, ticks: { stepSize: 20 } } }
+      }
+    });
+
+  }).catch(e => console.error("Dashboard data error:", e));
+</script>
 {% endblock %}

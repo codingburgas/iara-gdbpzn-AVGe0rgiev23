@@ -80,21 +80,24 @@
         {# ADMIN MENU                   #}
         {# ----------------------------- #}
         {% if current_user.role == "administrator" %}
-            <li><a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a></li>
-            <li><a href="{{ url_for('main.vessels') }}">Vessel Registry</a></li>
-            <li><a href="{{ url_for('main.permits') }}">Permits</a></li>
-            <li><a href="{{ url_for('main.admin_inspections') }}">Inspections</a></li>
-            <li><a href="{{ url_for('main.admin_violations') }}">Violations</a></li>
-            <li><a href="{{ url_for('main.admin_inspector_performance') }}">Inspector Performance</a></li>
+            <li><a href="{{ url_for('main.admin_dashboard') }}">📊 Dashboard</a></li>
+            <li><a href="{{ url_for('main.vessels') }}">🚢 Vessel Registry</a></li>
+            <li><a href="{{ url_for('main.permits') }}">📄 Permits</a></li>
+            <li><a href="{{ url_for('main.admin_inspections') }}">🔍 Inspections</a></li>
+            <li><a href="{{ url_for('main.schedule_list') }}">📅 Schedule</a></li>
+            <li><a href="{{ url_for('main.admin_violations') }}">⚠️ Violations</a></li>
+            <li><a href="{{ url_for('main.admin_inspector_performance') }}">📈 Performance</a></li>
+            <li><a href="{{ url_for('main.audit_log') }}">📋 Audit Log</a></li>
         {% endif %}
 
         {# ----------------------------- #}
         {# INSPECTOR MENU               #}
         {# ----------------------------- #}
         {% if current_user.role == "inspector" %}
-            <li><a href="{{ url_for('main.inspector_dashboard') }}">Dashboard</a></li>
-            <li><a href="{{ url_for('main.inspections_list') }}">My Inspections</a></li>
-            <li><a href="{{ url_for('main.create_inspection') }}">Start Inspection</a></li>
+            <li><a href="{{ url_for('main.inspector_dashboard') }}">📊 Dashboard</a></li>
+            <li><a href="{{ url_for('main.inspector_schedule') }}">📅 My Schedule</a></li>
+            <li><a href="{{ url_for('main.inspections_list') }}">🔍 My Inspections</a></li>
+            <li><a href="{{ url_for('main.create_inspection') }}">➕ New Inspection</a></li>
         {% endif %}
 
         {# ----------------------------- #}

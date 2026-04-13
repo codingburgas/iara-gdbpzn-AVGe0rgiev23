@@ -135,6 +135,11 @@
             <button class="btn btn-outline-danger">🗑 Delete Inspection</button>
         </form>
     {% endif %}
+
+    {% if inspection.status in ["submitted", "approved"] %}
+    <a href="{{ url_for('main.export_inspection_pdf', inspection_id=inspection.id) }}"
+       class="btn btn-outline-dark" target="_blank">📄 Export PDF Report</a>
+    {% endif %}
 </div>
 
 <!-- Bootstrap JS -->

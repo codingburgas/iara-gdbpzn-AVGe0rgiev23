@@ -1,0 +1,61 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>My Scheduled Inspections</h2>
+  <a href="{{ url_for('main.inspections_list') }}" class="btn btn-secondary">← My Inspections</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show">
+      {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+{% if schedules %}
+<div class="row g-3">
+  {% for s in schedules %}
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100
+      {% if s.scheduled_date == today %}border-primary border-2
+      {% elif s.scheduled_date < today %}border-danger
+      {% endif %}">
+      <div class="card-header d-flex justify-content-between align-items-center
+        {% if s.scheduled_date == today %}bg-primary text-white{% else %}bg-dark text-white{% endif %}">
+        <strong>{{ s.scheduled_date }} {% if s.scheduled_time %}at {{ s.scheduled_time }}{% endif %}</strong>
+        {% if s.status == "pending" %}<span class="badge bg-warning text-dark">Pending</span>
+        {% elif s.status == "accepted" %}<span class="badge bg-success">Accepted</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <p class="mb-1"><strong>Vessel:</strong> {{ s.vessel.call_sign }} ({{ s.vessel.international_number }})</p>
+        <p class="mb-1"><strong>Location:</strong> {{ s.location or "Not specified" }}</p>
+        {% if s.notes %}<p class="mb-1 text-muted"><em>{{ s.notes }}</em></p>{% endif %}
+        <p class="mb-0"><strong>Owner:</strong> {{ s.vessel.owner_name }}</p>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        {% if s.status == "pending" %}
+        <form method="POST" action="{{ url_for('main.schedule_accept', si_id=s.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-success btn-sm">✔ Accept</button>
+        </form>
+        {% endif %}
+        {% if s.status == "accepted" %}
+        <form method="POST" action="{{ url_for('main.schedule_start', si_id=s.id) }}"
+              onsubmit="return confirm('Start this inspection now?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary btn-sm">▶ Start Inspection</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('main.vessel_qr_print', vessel_id=s.vessel_id) }}"
+           class="btn btn-outline-secondary btn-sm" target="_blank">QR</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No inspections scheduled for you. Check back later or contact your administrator.</div>
+{% endif %}
+{% endblock %}
