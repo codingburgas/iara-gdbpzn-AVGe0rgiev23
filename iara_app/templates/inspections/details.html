@@ -3,7 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Inspection #{{ inspection.id }}</h2>
-    <a href="{{ url_for('main.inspections_list') }}" class="btn btn-secondary">← Back</a>
+    <a href="{{ url_for('inspector.inspections_list') }}" class="btn btn-secondary">← Back</a>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -71,7 +71,7 @@
     <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
         <span>Violations ({{ inspection.violations | length }})</span>
         {% if inspection.status == "draft" %}
-        <a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
+        <a href="{{ url_for('inspector.add_violation', inspection_id=inspection.id) }}"
            class="btn btn-sm btn-dark">+ Add Violation</a>
         {% endif %}
     </div>
@@ -109,7 +109,7 @@
                     </td>
                     <td class="text-center">{{ v.evidence | length }}</td>
                     <td>
-                        <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                        <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}"
                            class="btn btn-sm btn-info">View</a>
                     </td>
                 </tr>
@@ -125,11 +125,11 @@
 <!-- Action Buttons -->
 <div class="d-flex gap-2">
     {% if inspection.status == "draft" %}
-        <a href="{{ url_for('main.finalize_inspection', inspection_id=inspection.id) }}"
+        <a href="{{ url_for('inspector.finalize_inspection', inspection_id=inspection.id) }}"
            class="btn btn-success">✔ Finalize & Submit</a>
 
         <form method="POST"
-              action="{{ url_for('main.delete_inspection', inspection_id=inspection.id) }}"
+              action="{{ url_for('inspector.delete_inspection', inspection_id=inspection.id) }}"
               onsubmit="return confirm('Permanently delete this inspection?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline-danger">🗑 Delete Inspection</button>
@@ -137,7 +137,7 @@
     {% endif %}
 
     {% if inspection.status in ["submitted", "approved"] %}
-    <a href="{{ url_for('main.export_inspection_pdf', inspection_id=inspection.id) }}"
+    <a href="{{ url_for('inspector.export_inspection_pdf', inspection_id=inspection.id) }}"
        class="btn btn-outline-dark" target="_blank">📄 Export PDF Report</a>
     {% endif %}
 </div>

@@ -3,7 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>My Inspections</h2>
-    <a href="{{ url_for('main.create_inspection') }}" class="btn btn-primary">
+    <a href="{{ url_for('inspector.create_inspection') }}" class="btn btn-primary">
         + Start New Inspection
     </a>
 </div>
@@ -58,12 +58,12 @@
                 {% endif %}
             </td>
             <td class="d-flex gap-1">
-                <a href="{{ url_for('main.inspection_details', inspection_id=insp.id) }}"
+                <a href="{{ url_for('inspector.inspection_details', inspection_id=insp.id) }}"
                    class="btn btn-sm btn-info">Open</a>
 
                 {% if insp.status == "draft" %}
                 <form method="POST"
-                      action="{{ url_for('main.delete_inspection', inspection_id=insp.id) }}"
+                      action="{{ url_for('inspector.delete_inspection', inspection_id=insp.id) }}"
                       onsubmit="return confirm('Delete this inspection?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-sm btn-danger">Delete</button>

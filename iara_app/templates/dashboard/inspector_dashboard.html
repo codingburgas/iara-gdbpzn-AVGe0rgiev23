@@ -17,7 +17,7 @@
                         {% for insp in todays_inspections %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>{{ insp.vessel.call_sign }} — {{ insp.location }}</span>
-                            <a href="{{ url_for('main.inspection_details', inspection_id=insp.id) }}"
+                            <a href="{{ url_for('inspector.inspection_details', inspection_id=insp.id) }}"
                                class="btn btn-sm btn-outline-primary">Open</a>
                         </li>
                         {% endfor %}
@@ -43,7 +43,7 @@
                             <span class="text-truncate me-2" style="max-width:200px;">
                                 {{ v.description or v.violation_code.code if v.violation_code else "No code" }}
                             </span>
-                            <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                            <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}"
                                class="btn btn-sm btn-outline-danger">Resolve</a>
                         </li>
                         {% endfor %}
@@ -73,7 +73,7 @@
                             <span class="text-truncate me-2" style="max-width:200px;">
                                 {{ v.description or "—" }}
                             </span>
-                            <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                            <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}"
                                class="btn btn-sm btn-outline-warning">View</a>
                         </li>
                         {% endfor %}
@@ -99,7 +99,7 @@
                             <span class="text-truncate me-2" style="max-width:200px;">
                                 {{ v.description or "—" }}
                             </span>
-                            <a href="{{ url_for('main.upload_evidence', violation_id=v.id) }}"
+                            <a href="{{ url_for('inspector.upload_evidence', violation_id=v.id) }}"
                                class="btn btn-sm btn-outline-info">Add</a>
                         </li>
                         {% endfor %}
@@ -146,7 +146,7 @@
                     </td>
                     <td>{{ insp.final_score if insp.final_score is not none else insp.score }}</td>
                     <td>
-                        <a href="{{ url_for('main.inspection_details', inspection_id=insp.id) }}"
+                        <a href="{{ url_for('inspector.inspection_details', inspection_id=insp.id) }}"
                            class="btn btn-xs btn-sm btn-info">Open</a>
                     </td>
                 </tr>

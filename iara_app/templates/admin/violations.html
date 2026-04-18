@@ -30,7 +30,7 @@
         {% for v in violations %}
         <tr>
             <td>
-                <a href="{{ url_for('main.admin_inspection_detail', inspection_id=v.inspection.id) }}">#{{ v.inspection.id }}</a>
+                <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=v.inspection.id) }}">#{{ v.inspection.id }}</a>
             </td>
             <td>{{ v.inspection.vessel.call_sign }}</td>
             <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
@@ -60,7 +60,7 @@
                 {% endif %}
             </td>
             <td class="text-center">
-                <a href="{{ url_for('main.admin_view_evidence', violation_id=v.id) }}"
+                <a href="{{ url_for('admin.admin_view_evidence', violation_id=v.id) }}"
                    class="btn btn-sm btn-info">
                     View ({{ v.evidence | length }})
                 </a>
@@ -68,13 +68,13 @@
             <td>
                 {% if v.status == "corrected" %}
                 <form method="POST"
-                      action="{{ url_for('main.admin_approve_violation', violation_id=v.id) }}"
+                      action="{{ url_for('admin.admin_approve_violation', violation_id=v.id) }}"
                       style="display:inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-success btn-sm">Approve</button>
                 </form>
                 <form method="POST"
-                      action="{{ url_for('main.admin_reject_violation', violation_id=v.id) }}"
+                      action="{{ url_for('admin.admin_reject_violation', violation_id=v.id) }}"
                       style="display:inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-danger btn-sm">Reject</button>

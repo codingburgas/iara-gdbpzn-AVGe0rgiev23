@@ -4,10 +4,10 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Inspection #{{ inspection.id }} — Admin View</h2>
     <div class="d-flex gap-2">
-    <a href="{{ url_for('main.admin_inspections') }}" class="btn btn-secondary">← Back</a>
-    <a href="{{ url_for('main.export_inspection_pdf', inspection_id=inspection.id) }}"
+    <a href="{{ url_for('admin.admin_inspections') }}" class="btn btn-secondary">← Back</a>
+    <a href="{{ url_for('inspector.export_inspection_pdf', inspection_id=inspection.id) }}"
        class="btn btn-outline-dark" target="_blank">📄 PDF Report</a>
-    <a href="{{ url_for('main.vessel_qr_print', vessel_id=inspection.vessel.id) }}"
+    <a href="{{ url_for('admin.vessel_qr_print', vessel_id=inspection.vessel.id) }}"
        class="btn btn-outline-primary" target="_blank">QR Code</a>
   </div>
 </div>
@@ -91,7 +91,7 @@
     <div class="card-body d-flex gap-3 align-items-start flex-wrap">
 
         <form method="POST"
-              action="{{ url_for('main.admin_override_score', inspection_id=inspection.id) }}">
+              action="{{ url_for('admin.admin_override_score', inspection_id=inspection.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label class="form-label fw-bold">Override Score & Approve</label>
             <div class="input-group">
@@ -103,7 +103,7 @@
         </form>
 
         <form method="POST"
-              action="{{ url_for('main.admin_reject_inspection', inspection_id=inspection.id) }}"
+              action="{{ url_for('admin.admin_reject_inspection', inspection_id=inspection.id) }}"
               onsubmit="return confirm('Reject this inspection?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label class="form-label fw-bold">Reject Inspection</label><br>
@@ -161,20 +161,20 @@
                         {{ v.evidence | length }}
                         {% if v.evidence %}
                         <br>
-                        <a href="{{ url_for('main.admin_view_evidence', violation_id=v.id) }}"
+                        <a href="{{ url_for('admin.admin_view_evidence', violation_id=v.id) }}"
                            class="btn btn-xs btn-outline-info btn-sm mt-1">View</a>
                         {% endif %}
                     </td>
                     <td>
                         {% if v.status == "corrected" %}
                         <form method="POST"
-                              action="{{ url_for('main.admin_approve_violation', violation_id=v.id) }}"
+                              action="{{ url_for('admin.admin_approve_violation', violation_id=v.id) }}"
                               style="display:inline;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-success">Approve</button>
                         </form>
                         <form method="POST"
-                              action="{{ url_for('main.admin_reject_violation', violation_id=v.id) }}"
+                              action="{{ url_for('admin.admin_reject_violation', violation_id=v.id) }}"
                               style="display:inline;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-danger">Reject</button>

@@ -1,61 +1,138 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-7">
-
-        <div class="card shadow">
-            <div class="card-body">
-                <h3 class="text-center mb-4">Register</h3>
-
-                <form method="POST" action="{{ url_for('main.register') }}">
-                    {{ form.hidden_tag() }}
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ form.first_name.label(class="form-label") }}
-                            {{ form.first_name(class="form-control") }}
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            {{ form.last_name.label(class="form-label") }}
-                            {{ form.last_name(class="form-control") }}
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.email.label(class="form-label") }}
-                        {{ form.email(class="form-control") }}
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.phone.label(class="form-label") }}
-                        {{ form.phone(class="form-control") }}
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.role.label(class="form-label") }}
-                        {{ form.role(class="form-select") }}
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control") }}
-                    </div>
-
-                    <div class="d-grid">
-                        {{ form.submit(class="btn btn-success") }}
-                    </div>
-                </form>
-
-                <p class="mt-3 text-center">
-                    Already have an account?
-                    <a href="{{ url_for('main.login') }}">Login here</a>
-                </p>
-
-            </div>
-        </div>
-
+  <div class="col-md-7 col-lg-6">
+    <div class="text-center mb-4">
+      <div style="font-size:2rem;margin-bottom:8px;">🌊</div>
+      <h4 class="fw-bold mb-0">IARA System</h4>
+      <div class="text-muted" style="font-size:.8rem;letter-spacing:.1em;">FISHERIES INSPECTION AUTHORITY</div>
     </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="mb-1 fw-bold">Create your account</h5>
+        <p class="text-muted mb-4" style="font-size:.9rem;">Fill in your details to register</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show py-2">
+              {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.first_name.label(class="form-label fw-bold") }}
+              {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else ""),
+                 placeholder="John") }}
+              {% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.last_name.label(class="form-label fw-bold") }}
+              {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else ""),
+                 placeholder="Smith") }}
+              {% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-12">
+              {{ form.email.label(class="form-label fw-bold") }}
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+                 placeholder="your@email.com") }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.phone.label(class="form-label fw-bold") }}
+              {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""),
+                 placeholder="+359 88 123 4567") }}
+              {% for e in form.phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.id_number.label(class="form-label fw-bold") }}
+              {{ form.id_number(class="form-control" + (" is-invalid" if form.id_number.errors else ""),
+                 placeholder="ID Number") }}
+              {% for e in form.id_number.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.age_category.label(class="form-label fw-bold") }}
+              {{ form.age_category(class="form-select" + (" is-invalid" if form.age_category.errors else "")) }}
+              {% for e in form.age_category.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.role.label(class="form-label fw-bold") }}
+              {{ form.role(class="form-select" + (" is-invalid" if form.role.errors else "")) }}
+              {% for e in form.role.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.password.label(class="form-label fw-bold") }}
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""),
+                 placeholder="Min. 6 characters", id="pw1") }}
+              {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.confirm_password.label(class="form-label fw-bold") }}
+              {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""),
+                 placeholder="Repeat password", id="pw2") }}
+              {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Password strength bar -->
+            <div class="col-12">
+              <div id="strengthBar" style="height:4px;border-radius:2px;background:#e2e8f0;transition:all .3s">
+                <div id="strengthFill" style="height:100%;border-radius:2px;width:0%;transition:all .3s"></div>
+              </div>
+              <div id="strengthLabel" class="text-muted mt-1" style="font-size:.75rem;"></div>
+            </div>
+
+            <div class="col-12 d-grid mt-2">
+              {{ form.submit(class="btn btn-success btn-lg") }}
+            </div>
+          </div>
+        </form>
+
+        <hr class="my-3">
+        <p class="text-center text-muted mb-0" style="font-size:.9rem;">
+          Already have an account?
+          <a href="{{ url_for('auth.login') }}" class="fw-bold text-decoration-none">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+const pw = document.getElementById('pw1');
+const fill = document.getElementById('strengthFill');
+const lbl = document.getElementById('strengthLabel');
+const levels = [
+  {min:0,  color:'#ef4444', text:'Too short'},
+  {min:6,  color:'#f97316', text:'Weak'},
+  {min:8,  color:'#eab308', text:'Fair'},
+  {min:10, color:'#22c55e', text:'Strong'},
+];
+pw.addEventListener('input', () => {
+  const v = pw.value;
+  let score = 0;
+  if(v.length >= 6)  score++;
+  if(v.length >= 8) score++;
+  if(v.length >= 10) score++;
+  if(/[A-Z]/.test(v)) score++;
+  if(/[0-9]/.test(v)) score++;
+  if(/[^A-Za-z0-9]/.test(v)) score++;
+  const pct = Math.min(score*16, 100);
+  const lvl = v.length < 6 ? 0 : score <= 1 ? 1 : score <= 3 ? 2 : 3;
+  fill.style.width = pct + '%';
+  fill.style.background = levels[lvl].color;
+  lbl.textContent = v.length ? levels[lvl].text : '';
+});
+</script>
 {% endblock %}

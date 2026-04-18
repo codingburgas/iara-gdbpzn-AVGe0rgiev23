@@ -5,10 +5,10 @@
     <h2>Violations — Inspection #{{ inspection.id }}</h2>
     <div class="d-flex gap-2">
         {% if inspection.status == "draft" %}
-        <a href="{{ url_for('main.add_violation', inspection_id=inspection.id) }}"
+        <a href="{{ url_for('inspector.add_violation', inspection_id=inspection.id) }}"
            class="btn btn-danger">+ Add Violation</a>
         {% endif %}
-        <a href="{{ url_for('main.inspection_details', inspection_id=inspection.id) }}"
+        <a href="{{ url_for('inspector.inspection_details', inspection_id=inspection.id) }}"
            class="btn btn-secondary">← Back</a>
     </div>
 </div>
@@ -73,9 +73,9 @@
                 {% endif %}
             </td>
             <td>
-                <a href="{{ url_for('main.violation_details', violation_id=v.id) }}"
+                <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}"
                    class="btn btn-sm btn-info">Details</a>
-                <a href="{{ url_for('main.evidence_list', violation_id=v.id) }}"
+                <a href="{{ url_for('inspector.evidence_list', violation_id=v.id) }}"
                    class="btn btn-sm btn-outline-secondary">Evidence</a>
             </td>
         </tr>

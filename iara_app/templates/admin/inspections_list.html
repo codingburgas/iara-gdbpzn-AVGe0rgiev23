@@ -62,7 +62,7 @@
             <td>
                 {% if insp.status == "submitted" %}
                 <form method="POST"
-                      action="{{ url_for('main.admin_override_score', inspection_id=insp.id) }}">
+                      action="{{ url_for('admin.admin_override_score', inspection_id=insp.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="input-group input-group-sm">
                         <input type="number" name="new_score" min="0" max="100"
@@ -76,11 +76,11 @@
                 {% endif %}
             </td>
             <td class="d-flex gap-1">
-                <a href="{{ url_for('main.admin_inspection_detail', inspection_id=insp.id) }}"
+                <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=insp.id) }}"
                    class="btn btn-sm btn-info">View</a>
                 {% if insp.status == "submitted" %}
                 <form method="POST"
-                      action="{{ url_for('main.admin_reject_inspection', inspection_id=insp.id) }}"
+                      action="{{ url_for('admin.admin_reject_inspection', inspection_id=insp.id) }}"
                       onsubmit="return confirm('Reject this inspection?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-sm btn-danger">Reject</button>

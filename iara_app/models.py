@@ -43,7 +43,7 @@ class User(UserMixin, db.Model):
     vessel_registration = db.Column(db.String(50))
     fishing_permit_number = db.Column(db.String(50))
 
-    inspector_id = db.Column(db.String(50))
+    inspector_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     id_number = db.Column(db.String(50))
     age_category = db.Column(db.String(20))
@@ -51,15 +51,19 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
 
-    inspections = db.relationship("Inspection", backref="inspector", lazy=True)
+    # Password reset
+    reset_token       = db.Column(db.String(100), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
 
-    # FIX: Specify the foreign key explicitly
-    scheduled_inspections = db.relationship(
-        "ScheduledInspection",
-        foreign_keys="[ScheduledInspection.inspector_id]",
-        backref="assigned_inspector",
-        lazy=True
-    )
+    # Rate limiting — track failed login attempts
+    failed_logins   = db.Column(db.Integer, default=0)
+    locked_until    = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    inspections = db.relationship("Inspection", foreign_keys="Inspection.inspector_id", backref="inspector", lazy=True)
+    scheduled_inspections = db.relationship("ScheduledInspection", foreign_keys="ScheduledInspection.inspector_id", backref="assigned_inspector", lazy=True)
+    created_scheduled_inspections = db.relationship("ScheduledInspection", foreign_keys="ScheduledInspection.created_by_id", backref="created_by_user", lazy=True)
+    audit_logs = db.relationship("AuditLog", foreign_keys="AuditLog.user_id", backref="user", lazy=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(
@@ -183,7 +187,7 @@ class ViolationCode(db.Model):
 
 
 # ============================================================
-# SCHEDULED INSPECTION (NEW)
+# SCHEDULED INSPECTION
 # ============================================================
 
 class ScheduledInspection(db.Model):
@@ -195,20 +199,16 @@ class ScheduledInspection(db.Model):
     inspector_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     scheduled_date = db.Column(db.Date, nullable=False)
-    scheduled_time = db.Column(db.String(10))   # "09:00"
+    scheduled_time = db.Column(db.String(10))
     location = db.Column(db.String(255))
     notes = db.Column(db.Text)
 
-    # Status: pending → accepted → completed / cancelled
     status = db.Column(db.String(20), default="pending")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
 
-    # Link to actual Inspection once it's carried out
     inspection_id = db.Column(db.Integer, db.ForeignKey("inspection.id"), nullable=True)
-
-    created_by = db.relationship("User", foreign_keys=[created_by_id])
 
     def __repr__(self) -> str:
         return f"<ScheduledInspection {self.id} {self.scheduled_date}>"
@@ -301,7 +301,7 @@ class Evidence(db.Model):
 
 
 # ============================================================
-# AUDIT LOG (NEW)
+# AUDIT LOG
 # ============================================================
 
 class AuditLog(db.Model):
@@ -310,13 +310,11 @@ class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     action = db.Column(db.String(100), nullable=False)
-    target_type = db.Column(db.String(50))   # "Permit", "Inspection", etc.
+    target_type = db.Column(db.String(50))
     target_id = db.Column(db.Integer)
     detail = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship("User", foreign_keys=[user_id])
 
     def __repr__(self) -> str:
         return f"<AuditLog {self.action} by user {self.user_id}>"

@@ -1,0 +1,51 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Edit Profile</h2>
+  <a href="{{ url_for('auth.profile') }}" class="btn btn-secondary">← Back</a>
+</div>
+
+<div class="card shadow-sm" style="max-width:600px;">
+  <div class="card-body p-4">
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          {{ form.first_name.label(class="form-label fw-bold") }}
+          {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
+          {% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          {{ form.last_name.label(class="form-label fw-bold") }}
+          {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
+          {% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-12">
+          {{ form.phone.label(class="form-label fw-bold") }}
+          {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else "")) }}
+          {% for e in form.phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+
+        {% if current_user.role in ['fisherman', 'amateur'] %}
+        <div class="col-md-6">
+          {{ form.vessel_registration.label(class="form-label fw-bold") }}
+          {{ form.vessel_registration(class="form-control", placeholder="e.g. BG-1234") }}
+          <div class="form-text">Links your account to your vessel for dashboard data.</div>
+        </div>
+        <div class="col-md-6">
+          {{ form.fishing_permit_number.label(class="form-label fw-bold") }}
+          {{ form.fishing_permit_number(class="form-control", placeholder="e.g. FP-2024-001") }}
+        </div>
+        {% endif %}
+
+        <div class="col-12 mt-2">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

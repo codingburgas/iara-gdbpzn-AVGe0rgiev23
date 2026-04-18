@@ -3,7 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Add Violation — Inspection #{{ inspection.id }}</h2>
-    <a href="{{ url_for('main.violations_list', inspection_id=inspection.id) }}"
+    <a href="{{ url_for('inspector.violations_list', inspection_id=inspection.id) }}"
        class="btn btn-secondary">← Back</a>
 </div>
 

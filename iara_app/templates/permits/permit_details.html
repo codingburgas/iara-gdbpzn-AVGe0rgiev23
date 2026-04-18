@@ -3,7 +3,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Permit Details</h3>
-    <a href="{{ url_for('main.permits') }}" class="btn btn-secondary">← Back to Permits</a>
+    <a href="{{ url_for('admin.permits') }}" class="btn btn-secondary">← Back to Permits</a>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -51,7 +51,7 @@
                 <p><strong>International Number:</strong> {{ permit.vessel.international_number }}</p>
                 <p><strong>Owner:</strong> {{ permit.vessel.owner_name }}</p>
                 <p><strong>Captain:</strong> {{ permit.vessel.captain_name }}</p>
-                <a href="{{ url_for('main.vessel_details', vessel_id=permit.vessel.id) }}"
+                <a href="{{ url_for('admin.vessel_details', vessel_id=permit.vessel.id) }}"
                    class="btn btn-sm btn-outline-primary">View Vessel</a>
             </div>
         </div>
@@ -63,35 +63,35 @@
     <div class="card-header bg-secondary text-white">Actions</div>
     <div class="card-body d-flex flex-wrap gap-2">
 
-        <a href="{{ url_for('main.edit_permit', permit_id=permit.id) }}"
+        <a href="{{ url_for('admin.edit_permit', permit_id=permit.id) }}"
            class="btn btn-warning">✏ Edit</a>
 
-        <a href="{{ url_for('main.renew_permit', permit_id=permit.id) }}"
+        <a href="{{ url_for('admin.renew_permit', permit_id=permit.id) }}"
            class="btn btn-info">↻ Renew</a>
 
         {% if permit.status != "Active" %}
-        <form method="POST" action="{{ url_for('main.activate_permit', permit_id=permit.id) }}">
+        <form method="POST" action="{{ url_for('admin.activate_permit', permit_id=permit.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-success">✔ Activate</button>
         </form>
         {% endif %}
 
         {% if permit.status != "Suspended" %}
-        <form method="POST" action="{{ url_for('main.suspend_permit', permit_id=permit.id) }}">
+        <form method="POST" action="{{ url_for('admin.suspend_permit', permit_id=permit.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline-warning">⏸ Suspend</button>
         </form>
         {% endif %}
 
         {% if permit.status != "Expired" %}
-        <form method="POST" action="{{ url_for('main.expire_permit', permit_id=permit.id) }}">
+        <form method="POST" action="{{ url_for('admin.expire_permit', permit_id=permit.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline-secondary">✕ Mark Expired</button>
         </form>
         {% endif %}
 
         <form method="POST"
-              action="{{ url_for('main.delete_permit', permit_id=permit.id) }}"
+              action="{{ url_for('admin.delete_permit', permit_id=permit.id) }}"
               onsubmit="return confirm('Permanently delete this permit?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-danger">🗑 Delete</button>

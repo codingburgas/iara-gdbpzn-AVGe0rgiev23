@@ -4,8 +4,8 @@
   <h2>QR Code — {{ vessel.call_sign }}</h2>
   <div class="d-flex gap-2">
     <button onclick="window.print()" class="btn btn-primary">🖨 Print</button>
-    <a href="{{ url_for('main.vessel_qr', vessel_id=vessel.id) }}" download class="btn btn-secondary">⬇ Download PNG</a>
-    <a href="{{ url_for('main.vessel_details', vessel_id=vessel.id) }}" class="btn btn-outline-secondary">← Back</a>
+    <a href="{{ url_for('public.vessel_qr', vessel_id=vessel.id) }}" download class="btn btn-secondary">⬇ Download PNG</a>
+    <a href="{{ url_for('admin.vessel_details', vessel_id=vessel.id) }}" class="btn btn-outline-secondary">← Back</a>
   </div>
 </div>
 
@@ -15,7 +15,7 @@
     <h4 class="mb-0 mt-1">{{ vessel.call_sign }}</h4>
   </div>
 
-  <img src="{{ url_for('main.vessel_qr', vessel_id=vessel.id) }}"
+  <img src="{{ url_for('public.vessel_qr', vessel_id=vessel.id) }}"
        alt="QR Code for {{ vessel.call_sign }}"
        style="width:220px; height:220px; margin:16px auto; display:block;">
 

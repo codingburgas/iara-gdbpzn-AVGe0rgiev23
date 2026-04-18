@@ -16,7 +16,7 @@
 <div class="card shadow-sm mb-4">
   <div class="card-header bg-primary text-white fw-bold">Schedule New Inspection</div>
   <div class="card-body">
-    <form method="POST" action="{{ url_for('main.schedule_create') }}">
+    <form method="POST" action="{{ url_for('admin.schedule_create') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-3">
@@ -97,13 +97,13 @@
           </td>
           <td>
             {% if s.inspection_id %}
-              <a href="{{ url_for('main.admin_inspection_detail', inspection_id=s.inspection_id) }}"
+              <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=s.inspection_id) }}"
                  class="btn btn-sm btn-info">View</a>
             {% else %}—{% endif %}
           </td>
           <td>
             {% if s.status not in ["completed", "cancelled"] %}
-            <form method="POST" action="{{ url_for('main.schedule_cancel', si_id=s.id) }}"
+            <form method="POST" action="{{ url_for('admin.schedule_cancel', si_id=s.id) }}"
                   onsubmit="return confirm('Cancel this scheduled inspection?');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-danger">Cancel</button>

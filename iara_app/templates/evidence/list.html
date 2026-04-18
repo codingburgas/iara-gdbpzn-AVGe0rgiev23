@@ -4,9 +4,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Evidence — Violation #{{ violation.id }}</h2>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('main.upload_evidence', violation_id=violation.id) }}"
+        <a href="{{ url_for('inspector.upload_evidence', violation_id=violation.id) }}"
            class="btn btn-primary">+ Upload Evidence</a>
-        <a href="{{ url_for('main.violations_list', inspection_id=violation.inspection.id) }}"
+        <a href="{{ url_for('inspector.violations_list', inspection_id=violation.inspection.id) }}"
            class="btn btn-secondary">← Back</a>
     </div>
 </div>
@@ -35,7 +35,7 @@
         </p>
 
         <form method="POST"
-              action="{{ url_for('main.delete_evidence', evidence_id=e.id) }}"
+              action="{{ url_for('inspector.delete_evidence', evidence_id=e.id) }}"
               onsubmit="return confirm('Delete this evidence?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-danger">Delete</button>

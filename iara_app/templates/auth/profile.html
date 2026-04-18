@@ -1,0 +1,115 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>My Profile</h2>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('auth.profile_edit') }}" class="btn btn-primary">✏️ Edit Profile</a>
+    <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-secondary">🔑 Change Password</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Profile Card -->
+  <div class="col-md-4">
+    <div class="card shadow-sm text-center p-4">
+      <div class="mx-auto mb-3 d-flex align-items-center justify-content-center fw-bold text-white"
+           style="width:80px;height:80px;border-radius:50%;font-size:28px;
+           background:{% if user.role=='administrator' %}#1e293b{% elif user.role=='inspector' %}#0369a1{% elif user.role=='fisherman' %}#0f6e56{% else %}#854f0b{% endif %};">
+        {{ user.first_name[0] }}{{ user.last_name[0] }}
+      </div>
+      <h5 class="fw-bold mb-1">{{ user.first_name }} {{ user.last_name }}</h5>
+      <div class="mb-2">
+        {% if user.role == 'administrator' %}
+          <span class="badge bg-dark">Administrator</span>
+        {% elif user.role == 'inspector' %}
+          <span class="badge bg-primary">Inspector</span>
+        {% elif user.role == 'fisherman' %}
+          <span class="badge bg-success">Fisherman</span>
+        {% else %}
+          <span class="badge bg-warning text-dark">Amateur Fisher</span>
+        {% endif %}
+      </div>
+      <div class="text-muted" style="font-size:.85rem;">
+        Member since {{ user.created_at.strftime('%B %Y') if user.created_at else '—' }}
+      </div>
+      <div class="mt-2">
+        {% if user.is_active %}
+          <span class="badge bg-success">Active</span>
+        {% else %}
+          <span class="badge bg-danger">Inactive</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Card -->
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-dark text-white fw-bold">Account Details</div>
+      <div class="card-body">
+        <table class="table table-borderless mb-0">
+          <tr>
+            <td class="text-muted fw-bold" style="width:40%">Full Name</td>
+            <td>{{ user.first_name }} {{ user.last_name }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted fw-bold">Email</td>
+            <td>{{ user.email }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted fw-bold">Phone</td>
+            <td>{{ user.phone or '—' }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted fw-bold">Role</td>
+            <td>{{ user.role | capitalize }}</td>
+          </tr>
+          {% if user.role in ['fisherman', 'amateur'] %}
+          <tr>
+            <td class="text-muted fw-bold">Vessel Registration</td>
+            <td>{{ user.vessel_registration or '—' }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted fw-bold">Fishing Permit No.</td>
+            <td>{{ user.fishing_permit_number or '—' }}</td>
+          </tr>
+          {% endif %}
+          {% if user.role == 'inspector' %}
+          <tr>
+            <td class="text-muted fw-bold">Inspector ID</td>
+            <td>{{ user.inspector_id or '—' }}</td>
+          </tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-header bg-dark text-white fw-bold">Security</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Password</strong><br>
+            <span class="text-muted" style="font-size:.85rem;">Last changed: unknown (change it regularly)</span>
+          </div>
+          <a href="{{ url_for('auth.change_password') }}" class="btn btn-sm btn-outline-primary">Change</a>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Login attempts</strong><br>
+            <span class="text-muted" style="font-size:.85rem;">
+              {% if user.failed_logins and user.failed_logins > 0 %}
+                {{ user.failed_logins }} failed attempt(s)
+                {% if user.locked_until %} — Account locked until {{ user.locked_until.strftime('%H:%M') }}{% endif %}
+              {% else %}
+                No recent failed attempts
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
