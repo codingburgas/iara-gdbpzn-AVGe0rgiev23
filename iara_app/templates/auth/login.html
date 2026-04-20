@@ -1,83 +1,146 @@
-{% extends "layout/base.html" %}
-{% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5 col-lg-4">
-    <div class="text-center mb-4">
-      <div style="font-size:2rem;margin-bottom:8px;">🌊</div>
-      <h4 class="fw-bold mb-0">IARA System</h4>
-      <div class="text-muted" style="font-size:.8rem;letter-spacing:.1em;">FISHERIES INSPECTION AUTHORITY</div>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — IARA System</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/iara_theme.css') }}">
+</head>
+
+<body>
+
+  <div class="login-page">
+    <!-- Decorative background circles -->
+    <div
+      style="position:absolute;width:400px;height:400px;border-radius:50%;background:rgba(26,115,232,.06);top:-100px;right:-100px;pointer-events:none;">
+    </div>
+    <div
+      style="position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(13,148,136,.05);bottom:-80px;left:-80px;pointer-events:none;">
     </div>
 
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h5 class="mb-4 fw-bold">Sign in to your account</h5>
+    <div class="login-card">
+
+      <!-- Card Header -->
+      <div class="login-card-header">
+        <div class="login-logo-ring">🌊</div>
+        <div class="login-title">IARA System</div>
+        <div class="login-subtitle">Fisheries Inspection & Regulation Authority</div>
+      </div>
+
+      <!-- Card Body -->
+      <div class="login-card-body">
+        <h6 class="fw-bold mb-1" style="color:#0d1b2a;font-size:16px;">Welcome back</h6>
+        <p class="text-muted mb-4" style="font-size:13px;">Sign in to your official account to continue.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show py-2">
-              {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-          {% endfor %}
+        {% for category, message in messages %}
+        <div class="iara-alert {{ category }} mb-3">
+          {% if category == 'success' %}<i class="bi bi-check-circle-fill"></i>
+          {% elif category == 'danger' %}<i class="bi bi-x-circle-fill"></i>
+          {% elif category == 'warning' %}<i class="bi bi-exclamation-triangle-fill"></i>
+          {% else %}<i class="bi bi-info-circle-fill"></i>{% endif %}
+          {{ message }}
+        </div>
+        {% endfor %}
         {% endwith %}
 
         <form method="POST" novalidate>
           {{ form.hidden_tag() }}
 
-          <div class="mb-3">
-            {{ form.email.label(class="form-label fw-bold") }}
-            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
-               placeholder="your@email.com", autofocus=true) }}
+          <!-- Email -->
+          <div class="iara-form-group">
+            {{ form.email.label(class="") }}
+            <div class="input-group">
+              <span class="input-group-text" style="background:#f8fafc;border-right:0;border-color:#e3e8f0;">
+                <i class="bi bi-envelope" style="color:#6b7a99;"></i>
+              </span>
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+              placeholder="your@email.gov.bg", autofocus=true,
+              style="border-left:0;border-color:#e3e8f0;") }}
+            </div>
             {% for e in form.email.errors %}
-              <div class="invalid-feedback">{{ e }}</div>
+            <div class="text-danger mt-1" style="font-size:12px;">{{ e }}</div>
             {% endfor %}
           </div>
 
-          <div class="mb-3">
-            {{ form.password.label(class="form-label fw-bold") }}
+          <!-- Password -->
+          <div class="iara-form-group">
+            {{ form.password.label(class="") }}
             <div class="input-group">
+              <span class="input-group-text" style="background:#f8fafc;border-right:0;border-color:#e3e8f0;">
+                <i class="bi bi-lock" style="color:#6b7a99;"></i>
+              </span>
               {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""),
-                 id="passwordField", placeholder="••••••••") }}
-              <button class="btn btn-outline-secondary" type="button"
-                      onclick="togglePwd()" title="Show/hide password">
-                <span id="eyeIcon">👁</span>
+              id="passwordField", placeholder="••••••••",
+              style="border-left:0;border-right:0;border-color:#e3e8f0;") }}
+              <button class="input-group-text" type="button" onclick="togglePwd()"
+                style="background:#f8fafc;border-left:0;border-color:#e3e8f0;cursor:pointer;" title="Show/hide">
+                <i class="bi bi-eye" id="eyeIcon" style="color:#6b7a99;"></i>
               </button>
-              {% for e in form.password.errors %}
-                <div class="invalid-feedback">{{ e }}</div>
-              {% endfor %}
             </div>
+            {% for e in form.password.errors %}
+            <div class="text-danger mt-1" style="font-size:12px;">{{ e }}</div>
+            {% endfor %}
           </div>
 
+          <!-- Remember / Forgot -->
           <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="form-check">
               {{ form.remember(class="form-check-input") }}
-              {{ form.remember.label(class="form-check-label text-muted") }}
+              {{ form.remember.label(class="form-check-label text-muted", style="font-size:13px;") }}
             </div>
-            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none" style="font-size:.9rem;">
+            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none"
+              style="font-size:13px;color:var(--iara-blue);">
               Forgot password?
             </a>
           </div>
 
-          <div class="d-grid">
-            {{ form.submit(class="btn btn-primary btn-lg") }}
-          </div>
+          <!-- Submit -->
+          <button type="submit" class="btn-iara-primary w-100 justify-content-center py-2"
+            style="font-size:14px;border-radius:8px;">
+            <i class="bi bi-box-arrow-in-right"></i> Sign In to IARA
+          </button>
         </form>
 
-        <hr class="my-3">
-        <p class="text-center text-muted mb-0" style="font-size:.9rem;">
+        <hr class="my-4" style="border-color:#e3e8f0;">
+        <p class="text-center mb-0" style="font-size:13px;color:#6b7a99;">
           Don't have an account?
-          <a href="{{ url_for('auth.register') }}" class="fw-bold text-decoration-none">Register here</a>
+          <a href="{{ url_for('auth.register') }}" class="fw-bold text-decoration-none"
+            style="color:var(--iara-blue);">Register here</a>
         </p>
+      </div>
+
+      <!-- Card Footer -->
+      <div style="background:#f8fafc;border-top:1px solid #e3e8f0;padding:12px 32px;text-align:center;">
+        <span style="font-size:11px;color:#94a3b8;letter-spacing:.05em;">
+          <i class="bi bi-shield-lock" style="margin-right:4px;"></i>
+          Secure Government System — Authorised Use Only
+        </span>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-function togglePwd(){
-  const f=document.getElementById('passwordField');
-  const e=document.getElementById('eyeIcon');
-  if(f.type==='password'){f.type='text';e.textContent='🙈';}
-  else{f.type='password';e.textContent='👁';}
-}
-</script>
-{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function togglePwd() {
+      const f = document.getElementById('passwordField');
+      const e = document.getElementById('eyeIcon');
+      if (f.type === 'password') {
+        f.type = 'text';
+        e.className = 'bi bi-eye-slash';
+      } else {
+        f.type = 'password';
+        e.className = 'bi bi-eye';
+      }
+    }
+  </script>
+</body>
+
+</html>

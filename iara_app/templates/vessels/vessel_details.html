@@ -1,57 +1,143 @@
 {% extends "layout/base.html" %}
 {% block content %}
 
-<div class="card p-4 shadow-sm">
-    <h3 class="mb-3">Vessel Details</h3>
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="page-header-left">
+        <h1 class="page-title">Vessel Details</h1>
+        <p class="page-subtitle">Comprehensive profile and specifications for {{ vessel.call_sign }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/vessels" class="btn-iara-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Fleet
+        </a>
+        <a href="{{ url_for('admin.vessel_qr_print', vessel_id=vessel.id) }}" class="btn-iara-secondary" target="_blank"
+            style="color:#0f766e;border-color:#99f6e4;background:#f0fdfa;">
+            <i class="bi bi-qr-code"></i> Print QR Code
+        </a>
+        <a href="{{ url_for('admin.vessel_inspection_history', vessel_id=vessel.id) }}" class="btn-iara-primary">
+            <i class="bi bi-card-checklist"></i> Inspection History
+        </a>
+    </div>
+</div>
 
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <strong>International Number:</strong>
-            <p>{{ vessel.international_number }}</p>
-        </div>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="iara-card mb-4">
+            <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+                <h2 class="iara-card-title text-white"><i class="bi bi-info-square"></i> Registration & Specifications
+                </h2>
+            </div>
+            <div class="iara-card-body p-4">
 
-        <div class="col-md-6 mb-3">
-            <strong>Call Sign:</strong>
-            <p>{{ vessel.call_sign }}</p>
-        </div>
+                <div class="row g-4">
+                    <!-- Column 1 -->
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-muted"
+                            style="font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:16px;">Identifiers
+                        </h6>
+                        <div class="mb-3">
+                            <div class="text-muted" style="font-size:12px;margin-bottom:2px;">Call Sign & Name</div>
+                            <div style="font-size:18px;font-weight:700;color:var(--text-primary);">{{ vessel.call_sign
+                                }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="text-muted" style="font-size:12px;margin-bottom:2px;">International Number</div>
+                            <div style="font-size:16px;font-family:monospace;color:var(--iara-blue);">{{
+                                vessel.international_number }}</div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-muted" style="font-size:12px;margin-bottom:2px;">External Marking</div>
+                            <div><span class="iara-badge"
+                                    style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-family:monospace;font-size:13px;">{{
+                                    vessel.marking }}</span></div>
+                        </div>
 
-        <div class="col-md-6 mb-3">
-            <strong>Marking:</strong>
-            <p>{{ vessel.marking }}</p>
-        </div>
+                        <h6 class="text-uppercase text-muted mt-4"
+                            style="font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:16px;">Personnel</h6>
+                        <div class="mb-3">
+                            <div class="text-muted" style="font-size:12px;margin-bottom:2px;">Owner Name</div>
+                            <div style="font-size:14px;font-weight:600;"><i
+                                    class="bi bi-person-fill text-muted me-1"></i> {{ vessel.owner_name }}</div>
+                        </div>
+                        <div>
+                            <div class="text-muted" style="font-size:12px;margin-bottom:2px;">Captain Name</div>
+                            <div style="font-size:14px;font-weight:600;"><i
+                                    class="bi bi-person-badge-fill text-muted me-1"></i> {{ vessel.captain_name }}</div>
+                        </div>
+                    </div>
 
-        <div class="col-md-6 mb-3">
-            <strong>Engine Power:</strong>
-            <p>{{ vessel.engine_power }} HP</p>
-        </div>
+                    <!-- Column 2 -->
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-muted"
+                            style="font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:16px;">Technical
+                            Dimensions</h6>
 
-        <div class="col-md-6 mb-3">
-            <strong>Length:</strong>
-            <p>{{ vessel.length }} m</p>
-        </div>
+                        <div class="d-flex align-items-center mb-3 p-3"
+                            style="background:#f8fafc;border:1px solid var(--border-color);border-radius:8px;">
+                            <div
+                                style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+                                <i class="bi bi-geo-alt fs-5 text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted"
+                                    style="font-size:11px;font-weight:600;text-transform:uppercase;">Overall Length
+                                </div>
+                                <div style="font-size:16px;font-weight:700;line-height:1;">{{ vessel.length }}<span
+                                        style="font-size:12px;font-weight:400;color:var(--text-secondary);margin-left:2px;">m</span>
+                                </div>
+                            </div>
+                        </div>
 
-        <div class="col-md-6 mb-3">
-            <strong>Width:</strong>
-            <p>{{ vessel.width }} m</p>
-        </div>
+                        <div class="d-flex align-items-center mb-3 p-3"
+                            style="background:#f8fafc;border:1px solid var(--border-color);border-radius:8px;">
+                            <div
+                                style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+                                <i class="bi bi-arrows-expand fs-5 text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted"
+                                    style="font-size:11px;font-weight:600;text-transform:uppercase;">Overall Width</div>
+                                <div style="font-size:16px;font-weight:700;line-height:1;">{{ vessel.width }}<span
+                                        style="font-size:12px;font-weight:400;color:var(--text-secondary);margin-left:2px;">m</span>
+                                </div>
+                            </div>
+                        </div>
 
-        <div class="col-md-6 mb-3">
-            <strong>Owner:</strong>
-            <p>{{ vessel.owner_name }}</p>
-        </div>
+                        <div class="d-flex align-items-center p-3"
+                            style="background:#f8fafc;border:1px solid var(--border-color);border-radius:8px;">
+                            <div
+                                style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+                                <i class="bi bi-gear-fill fs-5 text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted"
+                                    style="font-size:11px;font-weight:600;text-transform:uppercase;">Engine Power</div>
+                                <div style="font-size:16px;font-weight:700;line-height:1;">{{ vessel.engine_power
+                                    }}<span
+                                        style="font-size:12px;font-weight:400;color:var(--text-secondary);margin-left:2px;">HP</span>
+                                </div>
+                            </div>
+                        </div>
 
-        <div class="col-md-6 mb-3">
-            <strong>Captain:</strong>
-            <p>{{ vessel.captain_name }}</p>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
-    <a href="{{ url_for('admin.vessel_inspection_history', vessel_id=vessel.id) }}"
-   class="btn btn-primary mt-3">View Inspection History</a>
-
-    <a href="{{ url_for('admin.vessel_qr_print', vessel_id=vessel.id) }}"
-       class="btn btn-outline-dark mt-3" target="_blank">🔲 QR Code</a>
-    <a href="/admin/vessels" class="btn btn-secondary mt-3">Back to List</a>
+    <!-- Decorative visual -->
+    <div class="col-lg-4 d-none d-lg-block">
+        <div
+            style="background:linear-gradient(135deg,var(--iara-blue),#0369a1);border-radius:12px;height:100%;color:white;position:relative;overflow:hidden;min-height:300px;">
+            <i class="bi bi-water" style="position:absolute;font-size:240px;opacity:0.05;bottom:-50px;right:-20px;"></i>
+            <div style="position:absolute;bottom:30px;left:30px;">
+                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">
+                    IARA Visual ID</div>
+                <div style="font-size:24px;font-family:monospace;font-weight:700;">{{ vessel.marking }}</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}

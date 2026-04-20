@@ -1,43 +1,86 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
-<h2>Inspector Performance</h2>
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Inspector Performance</h1>
+        <p class="page-subtitle">Review individual inspector statistics and average inspection scores</p>
+    </div>
+</div>
 
 {% if performance %}
-<table class="table table-bordered table-hover">
-    <thead class="table-dark">
-        <tr>
-            <th>Inspector</th>
-            <th>Email</th>
-            <th>Total Inspections</th>
-            <th>Average Score</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for p in performance %}
-        <tr>
-            <td>{{ p.inspector.first_name }} {{ p.inspector.last_name }}</td>
-            <td>{{ p.inspector.email }}</td>
-            <td>{{ p.total_inspections }}</td>
-            <td>
+<div class="row g-3 mb-4">
+    {% for p in performance %}
+    <div class="col-md-4">
+        <div class="iara-card" style="transition:var(--transition);"
+            onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+            <div class="iara-card-body">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                    <div
+                        style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--iara-blue),var(--iara-teal));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:white;flex-shrink:0;">
+                        {{ p.inspector.first_name[0]|upper }}{{ p.inspector.last_name[0]|upper }}
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:15px;">{{ p.inspector.first_name }} {{
+                            p.inspector.last_name }}</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">{{ p.inspector.email }}</div>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div style="background:#f0f6ff;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:24px;font-weight:800;color:var(--iara-blue);">{{ p.total_inspections
+                                }}</div>
+                            <div
+                                style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);">
+                                Inspections</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div
+                            style="background:{% if p.avg_score and p.avg_score >= 80 %}#f0fdf4{% elif p.avg_score and p.avg_score >= 60 %}#fffbeb{% else %}#fef2f2{% endif %};border-radius:8px;padding:12px;text-align:center;">
+                            <div
+                                style="font-size:24px;font-weight:800;color:{% if p.avg_score and p.avg_score >= 80 %}var(--iara-success){% elif p.avg_score and p.avg_score >= 60 %}var(--iara-warning){% else %}var(--iara-danger){% endif %};">
+                                {% if p.avg_score is not none %}{{ "%.0f"|format(p.avg_score) }}{% else %}—{% endif %}
+                            </div>
+                            <div
+                                style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);">
+                                Avg Score</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Score Bar -->
                 {% if p.avg_score is not none %}
-                    {% set score = p.avg_score | round(1) %}
-                    {% if score >= 80 %}
-                        <span class="badge bg-success fs-6">{{ score }}</span>
-                    {% elif score >= 60 %}
-                        <span class="badge bg-warning text-dark fs-6">{{ score }}</span>
-                    {% else %}
-                        <span class="badge bg-danger fs-6">{{ score }}</span>
-                    {% endif %}
-                {% else %}
-                    <span class="text-muted">N/A</span>
+                <div style="margin-top:14px;">
+                    <div
+                        style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">
+                        <span>Performance</span>
+                        <span>{{ "%.1f"|format(p.avg_score) }}/100</span>
+                    </div>
+                    <div style="height:6px;background:#f0f3f8;border-radius:3px;">
+                        <div style="height:100%;width:{{ p.avg_score }}%;border-radius:3px;
+              background:{% if p.avg_score >= 80 %}linear-gradient(90deg,#059669,#10b981){% elif p.avg_score >= 60 %}linear-gradient(90deg,#d97706,#f59e0b){% else %}linear-gradient(90deg,#dc2626,#ef4444){% endif %};
+              transition:width .6s ease;"></div>
+                    </div>
+                </div>
                 {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 {% else %}
-<div class="alert alert-info">No inspectors registered yet.</div>
+<div class="iara-card">
+    <div class="iara-card-body">
+        <div class="empty-state">
+            <i class="bi bi-bar-chart-line"></i>
+            <h5>No inspector data yet</h5>
+            <p>Performance data will appear once inspectors have submitted inspections.</p>
+        </div>
+    </div>
+</div>
 {% endif %}
+
 {% endblock %}

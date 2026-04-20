@@ -1,43 +1,91 @@
 {% extends "layout/base.html" %}
 {% block content %}
-<h2 class="mb-4">Audit Log</h2>
 
-{% if logs %}
-<table class="table table-bordered table-hover table-sm align-middle">
-  <thead class="table-dark">
-    <tr>
-      <th>Timestamp</th>
-      <th>User</th>
-      <th>Action</th>
-      <th>Target</th>
-      <th>Detail</th>
-      <th>IP</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for log in logs %}
-    <tr>
-      <td style="white-space:nowrap;font-size:.85rem;">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td>
-        {% if log.user %}
-          <span class="badge bg-secondary">{{ log.user.role }}</span>
-          {{ log.user.first_name }} {{ log.user.last_name }}
-        {% else %}—{% endif %}
-      </td>
-      <td><code>{{ log.action }}</code></td>
-      <td>
-        {% if log.target_type %}
-          <span class="badge bg-light text-dark border">{{ log.target_type }}</span>
-          #{{ log.target_id }}
-        {% else %}—{% endif %}
-      </td>
-      <td style="font-size:.85rem; color:var(--bs-secondary);">{{ log.detail or "—" }}</td>
-      <td style="font-size:.8rem;">{{ log.ip_address or "—" }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<div class="alert alert-info">No audit log entries yet.</div>
-{% endif %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Audit Log</h1>
+    <p class="page-subtitle">System activity trail — last 200 events</p>
+  </div>
+</div>
+
+<div class="iara-card">
+  <div class="iara-card-header">
+    <h2 class="iara-card-title"><i class="bi bi-journal-text"></i> Activity Log</h2>
+    <span class="iara-badge badge-inspector">{{ logs|length }} entries</span>
+  </div>
+  <div class="iara-table-wrapper">
+    <table class="iara-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Target</th>
+          <th>Detail</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">
+            {{ log.created_at.strftime('%d %b %Y %H:%M') if log.created_at else '—' }}
+          </td>
+          <td>
+            {% if log.user %}
+            <div style="font-weight:600;font-size:13px;">
+              {{ log.user.first_name }} {{ log.user.last_name }}
+            </div>
+            <div style="font-size:11px;color:var(--text-secondary);">{{ log.user.email }}</div>
+            {% else %}
+            <span style="color:var(--text-secondary);font-size:13px;">System</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set action = log.action or '' %}
+            {% if 'delete' in action %}
+            <span class="iara-badge badge-status-expired"><i class="bi bi-trash3-fill"></i> {{ action }}</span>
+            {% elif 'create' in action or 'add' in action %}
+            <span class="iara-badge badge-status-active"><i class="bi bi-plus-circle-fill"></i> {{ action }}</span>
+            {% elif 'login' in action %}
+            <span class="iara-badge badge-inspector"><i class="bi bi-box-arrow-in-right"></i> {{ action }}</span>
+            {% elif 'reset' in action or 'unlock' in action %}
+            <span class="iara-badge badge-sev-medium"><i class="bi bi-key-fill"></i> {{ action }}</span>
+            {% else %}
+            <span class="iara-badge" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">
+              <i class="bi bi-pencil-fill"></i> {{ action }}
+            </span>
+            {% endif %}
+          </td>
+          <td style="font-size:13px;">
+            {% if log.target_type %}
+            <span style="font-weight:600;">{{ log.target_type }}</span>
+            {% if log.target_id %}
+            <span style="color:var(--text-secondary);">#{{ log.target_id }}</span>
+            {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:12px;color:var(--text-secondary);max-width:300px;">
+            {{ (log.detail or '')[:100] }}{% if (log.detail or '')|length > 100 %}…{% endif %}
+          </td>
+          <td style="font-size:12px;font-family:monospace;color:var(--text-secondary);">
+            {{ log.ip_address or '—' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-journal-x"></i>
+              <h5>No audit log entries</h5>
+              <p>System activity will appear here once users start performing actions.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}

@@ -1,43 +1,76 @@
 {% extends "layout/base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Vessel Registry</h3>
-    <a href="{{ url_for('admin.add_vessel') }}" class="btn btn-primary">+ Add Vessel</a>
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="page-header-left">
+        <h1 class="page-title">Vessel Registry</h1>
+        <p class="page-subtitle">Manage registered operating fishing vessels</p>
+    </div>
+    <a href="{{ url_for('admin.add_vessel') }}" class="btn-iara-primary">
+        <i class="bi bi-plus-circle"></i> Add Vessel
+    </a>
 </div>
 
-<div class="card p-3 shadow-sm">
-    <table class="table table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>International Number</th>
-                <th>Call Sign</th>
-                <th>Marking</th>
-                <th>Owner</th>
-                <th>Captain</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for vessel in vessels %}
-            <tr>
-                <td>{{ vessel.id }}</td>
-                <td>{{ vessel.international_number }}</td>
-                <td>{{ vessel.call_sign }}</td>
-                <td>{{ vessel.marking }}</td>
-                <td>{{ vessel.owner_name }}</td>
-                <td>{{ vessel.captain_name }}</td>
-                <td>
-                    <a href="/admin/vessels/{{ vessel.id }}" class="btn btn-sm btn-outline-secondary">
-                        View
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="iara-card">
+    <div class="iara-card-header">
+        <h2 class="iara-card-title"><i class="bi bi-ship"></i> Registered Vessels</h2>
+        <span class="iara-badge badge-inspector">{{ vessels|length }} total</span>
+    </div>
+    <div class="iara-table-wrapper">
+        <table class="iara-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Vessel Name / Sign</th>
+                    <th>Reg Number</th>
+                    <th>External Marking</th>
+                    <th>Owner / Captain</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vessel in vessels %}
+                <tr>
+                    <td style="font-size:12px;color:var(--text-secondary);">#{{ vessel.id }}</td>
+                    <td>
+                        <div style="font-weight:600;font-size:14px;color:var(--text-primary);">{{ vessel.call_sign }}
+                        </div>
+                    </td>
+                    <td style="font-family:monospace;font-size:12px;color:var(--text-secondary);">
+                        {{ vessel.international_number }}
+                    </td>
+                    <td>
+                        <span class="iara-badge"
+                            style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;font-family:monospace;">{{
+                            vessel.marking }}</span>
+                    </td>
+                    <td style="font-size:13px;">
+                        <div class="text-truncate" style="max-width:180px;"><span class="text-muted"
+                                style="font-size:11px;">O:</span> {{ vessel.owner_name }}</div>
+                        <div class="text-truncate" style="max-width:180px;"><span class="text-muted"
+                                style="font-size:11px;">C:</span> {{ vessel.captain_name }}</div>
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="/admin/vessels/{{ vessel.id }}" class="btn-iara-secondary"
+                            style="padding:4px 12px;font-size:12px;">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i class="bi bi-water text-muted fs-1 mb-2"></i>
+                            <h5 class="mb-1">No vessels registered</h5>
+                            <p class="text-muted">Register the first vessel to see it here.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 {% endblock %}

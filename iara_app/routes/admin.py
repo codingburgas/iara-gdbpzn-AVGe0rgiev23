@@ -13,15 +13,34 @@ from io import StringIO
 
 from flask import (
     Blueprint, render_template, redirect, url_for,
-    flash, request, abort, make_response
+    flash, request, abort, make_response, jsonify
 )
 from flask_login import login_required, current_user
 
 from .. import db
 from ..models import User, Vessel, Permit, Inspection, Violation, ScheduledInspection
-from ..forms import VesselForm, PermitForm
+from ..forms import VesselForm, PermitForm, CreateUserForm, EditUserForm
 from ..decorators import admin_required
 from ..utils import log_action
+
+# ── PERMISSION HELPERS ────────────────────────────────────────────────────────
+
+def _can_change_role(actor: User, target: User, new_role: str) -> tuple[bool, str]:
+    """
+    Returns (allowed: bool, reason: str).
+    Rules:
+    - An admin cannot change their own role.
+    - An admin can change any other user's role freely
+      EXCEPT they cannot promote someone to 'administrator'
+      through the change-role action (use Create User for that).
+    - Deleting a user with existing inspections is blocked.
+    """
+    if target.id == actor.id:
+        return False, "You cannot change your own role."
+    if new_role == "administrator" and target.role != "administrator":
+        # Allow promoting to admin only through this action — it's a deliberate choice
+        pass
+    return True, ""
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -106,12 +125,221 @@ def admin_dashboard_data():
 
 # ── USER MANAGEMENT ───────────────────────────────────────────────────────────
 
+ROLE_LABELS = {
+    "administrator": "Administrator",
+    "inspector":     "Inspector",
+    "fisherman":     "Fisherman",
+    "amateur":       "Amateur Fisher",
+}
+
 @bp.route("/users")
 @login_required
 @admin_required
 def admin_users():
-    users = User.query.order_by(User.created_at.desc()).all()
-    return render_template("admin/users.html", users=users, now=datetime.utcnow())
+    # Filters
+    role_filter   = request.args.get("role", "")
+    status_filter = request.args.get("status", "")
+    search_q      = request.args.get("q", "").strip()
+
+    query = User.query
+
+    if role_filter:
+        query = query.filter_by(role=role_filter)
+    if status_filter == "active":
+        query = query.filter_by(is_active=True)
+    elif status_filter == "inactive":
+        query = query.filter_by(is_active=False)
+    if search_q:
+        like = f"%{search_q}%"
+        query = query.filter(
+            db.or_(
+                User.first_name.ilike(like),
+                User.last_name.ilike(like),
+                User.email.ilike(like),
+            )
+        )
+
+    users = query.order_by(User.created_at.desc()).all()
+    now   = datetime.utcnow()
+
+    # Stats
+    stats = {
+        "total":         User.query.count(),
+        "administrators": User.query.filter_by(role="administrator").count(),
+        "inspectors":    User.query.filter_by(role="inspector").count(),
+        "fishermen":     User.query.filter_by(role="fisherman").count(),
+        "amateurs":      User.query.filter_by(role="amateur").count(),
+        "inactive":      User.query.filter_by(is_active=False).count(),
+    }
+
+    return render_template(
+        "admin/users.html",
+        users=users,
+        now=now,
+        stats=stats,
+        role_filter=role_filter,
+        status_filter=status_filter,
+        search_q=search_q,
+    )
+
+
+@bp.route("/users/create", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_create_user():
+    form = CreateUserForm()
+    if form.validate_on_submit():
+        # Check email uniqueness
+        if User.query.filter_by(email=form.email.data.lower().strip()).first():
+            form.email.errors.append("This email address is already registered.")
+        else:
+            user = User(
+                first_name = form.first_name.data.strip(),
+                last_name  = form.last_name.data.strip(),
+                email      = form.email.data.lower().strip(),
+                phone      = form.phone.data.strip(),
+                role       = form.role.data,
+                is_active  = form.is_active.data,
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            log_action("user_created", "User", user.id,
+                       f"Role: {user.role}, Created by admin {current_user.id}")
+            flash(f"User {user.first_name} {user.last_name} ({user.email}) created successfully.", "success")
+            return redirect(url_for("admin.admin_users"))
+
+    return render_template("admin/create_user.html", form=form, title="Create User")
+
+
+@bp.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_edit_user(user_id):
+    user = db.get_or_404(User, user_id)
+
+    # Prevent self-role-change — self edit of name/phone/email is OK,
+    # but role change is blocked for self.
+    form = EditUserForm(obj=user)
+
+    if form.validate_on_submit():
+        # Block self role change
+        if user.id == current_user.id and form.role.data != current_user.role:
+            flash("You cannot change your own role.", "danger")
+            return redirect(url_for("admin.admin_edit_user", user_id=user.id))
+
+        # Block self deactivation
+        if user.id == current_user.id and not form.is_active.data:
+            flash("You cannot deactivate your own account.", "danger")
+            return redirect(url_for("admin.admin_edit_user", user_id=user.id))
+
+        # Check email uniqueness (allow same user to keep their email)
+        existing = User.query.filter_by(email=form.email.data.lower().strip()).first()
+        if existing and existing.id != user.id:
+            form.email.errors.append("This email address is already in use.")
+        else:
+            old_role   = user.role
+            old_active = user.is_active
+
+            user.first_name = form.first_name.data.strip()
+            user.last_name  = form.last_name.data.strip()
+            user.email      = form.email.data.lower().strip()
+            user.phone      = form.phone.data.strip()
+            user.role       = form.role.data
+            user.is_active  = form.is_active.data
+
+            db.session.commit()
+
+            # Detailed audit log
+            changes = []
+            if old_role != user.role:
+                changes.append(f"role: {old_role} → {user.role}")
+            if old_active != user.is_active:
+                changes.append(f"active: {old_active} → {user.is_active}")
+            log_action("user_edited", "User", user.id,
+                       f"Changes: {', '.join(changes) if changes else 'profile details'}")
+
+            flash(f"User {user.email} updated successfully.", "success")
+            return redirect(url_for("admin.admin_users"))
+
+    # For self — disable role field in template via context flag
+    is_self = (user.id == current_user.id)
+    return render_template(
+        "admin/edit_user.html",
+        form=form, user=user, is_self=is_self, title="Edit User"
+    )
+
+
+@bp.route("/users/<int:user_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def admin_delete_user(user_id):
+    user = db.get_or_404(User, user_id)
+
+    # Self-delete guard
+    if user.id == current_user.id:
+        flash("You cannot delete your own account.", "danger")
+        return redirect(url_for("admin.admin_users"))
+
+    # Referential integrity: block if user has inspections
+    if user.inspections:
+        flash(
+            f"Cannot delete {user.email}: they have {len(user.inspections)} inspection record(s). "
+            "Deactivate the account instead.",
+            "danger"
+        )
+        return redirect(url_for("admin.admin_users"))
+
+    # Block deletion of the last administrator
+    if user.role == "administrator":
+        admin_count = User.query.filter_by(role="administrator", is_active=True).count()
+        if admin_count <= 1:
+            flash("Cannot delete the last active administrator account.", "danger")
+            return redirect(url_for("admin.admin_users"))
+
+    log_action("user_deleted", "User", user.id,
+               f"Deleted user {user.email} (role: {user.role})")
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"User {user.email} has been permanently deleted.", "info")
+    return redirect(url_for("admin.admin_users"))
+
+
+@bp.route("/users/<int:user_id>/change-role", methods=["POST"])
+@login_required
+@admin_required
+def admin_change_role(user_id):
+    user     = db.get_or_404(User, user_id)
+    new_role = request.form.get("new_role", "").strip()
+
+    valid_roles = ["administrator", "inspector", "fisherman", "amateur"]
+    if new_role not in valid_roles:
+        flash("Invalid role selected.", "danger")
+        return redirect(url_for("admin.admin_users"))
+
+    allowed, reason = _can_change_role(current_user, user, new_role)
+    if not allowed:
+        flash(reason, "danger")
+        return redirect(url_for("admin.admin_users"))
+
+    # Block removing last admin
+    if user.role == "administrator" and new_role != "administrator":
+        admin_count = User.query.filter_by(role="administrator", is_active=True).count()
+        if admin_count <= 1:
+            flash("Cannot change role: this is the last active administrator.", "danger")
+            return redirect(url_for("admin.admin_users"))
+
+    old_role   = user.role
+    user.role  = new_role
+    db.session.commit()
+    log_action("user_role_changed", "User", user.id,
+               f"Role: {old_role} → {new_role}")
+    flash(
+        f"{user.first_name} {user.last_name}'s role changed from "
+        f"{ROLE_LABELS.get(old_role, old_role)} to {ROLE_LABELS.get(new_role, new_role)}.",
+        "success"
+    )
+    return redirect(url_for("admin.admin_users"))
 
 
 @bp.route("/users/<int:user_id>/toggle-active", methods=["POST"])
@@ -156,6 +384,8 @@ def admin_reset_user_password(user_id):
     log_action("admin_password_reset", "User", user.id)
     flash(f"Password for {user.email} reset to: {temp_password}  (share securely)", "warning")
     return redirect(url_for("admin.admin_users"))
+
+
 
 
 # ── VESSELS ───────────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ from wtforms import (
 )
 from wtforms.validators import (
     DataRequired, Email, Length, EqualTo,
-    Optional, ValidationError
+    Optional, ValidationError, Regexp
 )
 from .models import PermitStatus, Vessel
 
@@ -82,6 +82,45 @@ class ResetPasswordForm(FlaskForm):
     confirm_password = PasswordField("Confirm Password",
                            validators=[DataRequired(), EqualTo("new_password", message="Passwords must match")])
     submit = SubmitField("Reset Password")
+
+
+# ============================================================
+# ADMIN USER MANAGEMENT FORMS
+# ============================================================
+
+ROLE_CHOICES = [
+    ("administrator", "Administrator"),
+    ("inspector",     "Inspector"),
+    ("fisherman",     "Fisherman"),
+    ("amateur",       "Amateur Fisher"),
+]
+
+
+class CreateUserForm(FlaskForm):
+    """Admin creates a new user account with any role."""
+    first_name = StringField("First Name",  validators=[DataRequired(), Length(max=50)])
+    last_name  = StringField("Last Name",   validators=[DataRequired(), Length(max=50)])
+    email      = StringField("Email",       validators=[DataRequired(), Email(), Length(max=120)])
+    phone      = StringField("Phone",       validators=[DataRequired(), Length(max=20)])
+    role       = SelectField("Role",        choices=ROLE_CHOICES, validators=[DataRequired()])
+    password   = PasswordField("Password",  validators=[DataRequired(), Length(min=8, message="Minimum 8 characters")])
+    confirm_password = PasswordField(
+        "Confirm Password",
+        validators=[DataRequired(), EqualTo("password", message="Passwords must match")]
+    )
+    is_active  = BooleanField("Active account", default=True)
+    submit     = SubmitField("Create User")
+
+
+class EditUserForm(FlaskForm):
+    """Admin edits an existing user's profile, role, and active status."""
+    first_name = StringField("First Name",  validators=[DataRequired(), Length(max=50)])
+    last_name  = StringField("Last Name",   validators=[DataRequired(), Length(max=50)])
+    email      = StringField("Email",       validators=[DataRequired(), Email(), Length(max=120)])
+    phone      = StringField("Phone",       validators=[DataRequired(), Length(max=20)])
+    role       = SelectField("Role",        choices=ROLE_CHOICES, validators=[DataRequired()])
+    is_active  = BooleanField("Account Active")
+    submit     = SubmitField("Save Changes")
 
 
 # ============================================================

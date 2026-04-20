@@ -1,93 +1,119 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
-<h2>All Violations</h2>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
-{% endwith %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Violations</h1>
+        <p class="page-subtitle">Review and manage all recorded fishing violations</p>
+    </div>
+</div>
 
-{% if violations %}
-<table class="table table-striped table-bordered align-middle">
-    <thead class="table-dark">
-        <tr>
-            <th>Inspection</th>
-            <th>Vessel</th>
-            <th>Code</th>
-            <th>Severity</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Evidence</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for v in violations %}
-        <tr>
-            <td>
-                <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=v.inspection.id) }}">#{{ v.inspection.id }}</a>
-            </td>
-            <td>{{ v.inspection.vessel.call_sign }}</td>
-            <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
-            <td>
-                {% if v.severity == "Critical" %}
-                    <span class="badge bg-danger">Critical</span>
-                {% elif v.severity == "High" %}
-                    <span class="badge" style="background:#fd7e14">High</span>
-                {% elif v.severity == "Medium" %}
-                    <span class="badge bg-warning text-dark">Medium</span>
+<div class="iara-card">
+    <div class="iara-card-header">
+        <h2 class="iara-card-title"><i class="bi bi-exclamation-triangle-fill"></i> All Violations</h2>
+        <span class="iara-badge badge-sev-high">{{ violations|length }} records</span>
+    </div>
+    <div class="iara-table-wrapper">
+        <table class="iara-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Inspection</th>
+                    <th>Code</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in violations %}
+                <tr>
+                    <td style="font-size:12px;color:var(--text-secondary);">#{{ v.id }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=v.inspection_id) }}"
+                            style="color:var(--iara-blue);font-weight:600;font-size:13px;text-decoration:none;">
+                            #{{ v.inspection_id }}
+                        </a>
+                    </td>
+                    <td style="font-size:12px;font-family:monospace;">
+                        {% if v.violation_code %}
+                        <span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">{{ v.violation_code.code
+                            }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if v.severity == 'Critical' %}
+                        <span class="iara-badge badge-sev-critical"><i class="bi bi-circle-fill"
+                                style="font-size:7px;"></i> Critical</span>
+                        {% elif v.severity == 'High' %}
+                        <span class="iara-badge badge-sev-high"><i class="bi bi-circle-fill" style="font-size:7px;"></i>
+                            High</span>
+                        {% elif v.severity == 'Medium' %}
+                        <span class="iara-badge badge-sev-medium"><i class="bi bi-circle-fill"
+                                style="font-size:7px;"></i> Medium</span>
+                        {% else %}
+                        <span class="iara-badge badge-sev-low"><i class="bi bi-circle-fill" style="font-size:7px;"></i>
+                            Low</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:13px;max-width:220px;">
+                        {{ (v.description or '')[:80] }}{% if (v.description or '')|length > 80 %}…{% endif %}
+                    </td>
+                    <td>
+                        {% if v.status == 'approved' %}
+                        <span class="iara-badge badge-status-active"><i class="bi bi-check-circle"></i> Approved</span>
+                        {% elif v.status == 'rejected' %}
+                        <span class="iara-badge badge-status-expired"><i class="bi bi-x-circle"></i> Rejected</span>
+                        {% else %}
+                        <span class="iara-badge badge-sev-medium"><i class="bi bi-clock"></i> Open</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;color:var(--text-secondary);">
+                        {{ v.created_at.strftime('%d %b %Y') if v.created_at else '—' }}
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="{{ url_for('admin.admin_view_evidence', violation_id=v.id) }}"
+                                class="btn-iara-secondary" style="padding:5px 10px;font-size:12px;height:30px;">
+                                <i class="bi bi-images"></i> Evidence
+                            </a>
+                            {% if v.status == 'open' %}
+                            <form method="POST"
+                                action="{{ url_for('admin.admin_approve_violation', violation_id=v.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-iara-primary"
+                                    style="padding:5px 10px;font-size:12px;height:30px;">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </button>
+                            </form>
+                            <form method="POST"
+                                action="{{ url_for('admin.admin_reject_violation', violation_id=v.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-iara-danger"
+                                    style="padding:5px 10px;font-size:12px;height:30px;">
+                                    <i class="bi bi-x-circle"></i> Reject
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
                 {% else %}
-                    <span class="badge bg-secondary">Low</span>
-                {% endif %}
-            </td>
-            <td>{{ v.description or "—" }}</td>
-            <td>
-                {% if v.status == "open" %}
-                    <span class="badge bg-danger">Open</span>
-                {% elif v.status == "corrected" %}
-                    <span class="badge bg-warning text-dark">Corrected</span>
-                {% elif v.status == "approved" %}
-                    <span class="badge bg-success">Approved</span>
-                {% elif v.status == "rejected" %}
-                    <span class="badge bg-secondary">Rejected</span>
-                {% else %}
-                    <span class="badge bg-light text-dark">{{ v.status }}</span>
-                {% endif %}
-            </td>
-            <td class="text-center">
-                <a href="{{ url_for('admin.admin_view_evidence', violation_id=v.id) }}"
-                   class="btn btn-sm btn-info">
-                    View ({{ v.evidence | length }})
-                </a>
-            </td>
-            <td>
-                {% if v.status == "corrected" %}
-                <form method="POST"
-                      action="{{ url_for('admin.admin_approve_violation', violation_id=v.id) }}"
-                      style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="btn btn-success btn-sm">Approve</button>
-                </form>
-                <form method="POST"
-                      action="{{ url_for('admin.admin_reject_violation', violation_id=v.id) }}"
-                      style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="btn btn-danger btn-sm">Reject</button>
-                </form>
-                {% else %}
-                <span class="text-muted">—</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<div class="alert alert-info">No violations recorded yet.</div>
-{% endif %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="bi bi-shield-check"></i>
+                            <h5>No violations recorded</h5>
+                            <p>All clear — no violations have been logged yet.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% endblock %}

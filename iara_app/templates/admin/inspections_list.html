@@ -1,97 +1,129 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
-<h2>All Inspections</h2>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
-{% endwith %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Inspections</h1>
+        <p class="page-subtitle">Review and approve all submitted inspection reports</p>
+    </div>
+</div>
 
-{% if inspections %}
-<table class="table table-bordered table-hover align-middle">
-    <thead class="table-dark">
-        <tr>
-            <th>#</th>
-            <th>Date</th>
-            <th>Vessel</th>
-            <th>Inspector</th>
-            <th>Status</th>
-            <th>Violations</th>
-            <th>Score</th>
-            <th>Override Score</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for insp in inspections %}
-        <tr>
-            <td>{{ insp.id }}</td>
-            <td>{{ insp.date }}</td>
-            <td>{{ insp.vessel.call_sign }}</td>
-            <td>{{ insp.inspector.first_name }} {{ insp.inspector.last_name }}</td>
-            <td>
-                {% if insp.status == "draft" %}
-                    <span class="badge bg-secondary">Draft</span>
-                {% elif insp.status == "submitted" %}
-                    <span class="badge bg-primary">Submitted</span>
-                {% elif insp.status == "approved" %}
-                    <span class="badge bg-success">Approved</span>
-                {% elif insp.status == "rejected" %}
-                    <span class="badge bg-danger">Rejected</span>
-                {% endif %}
-            </td>
-            <td class="text-center">{{ insp.violations | length }}</td>
-            <td>
-                {% if insp.final_score is not none %}
-                    {% if insp.final_score >= 80 %}
-                        <span class="badge bg-success fs-6">{{ insp.final_score }}</span>
-                    {% elif insp.final_score >= 60 %}
-                        <span class="badge bg-warning text-dark fs-6">{{ insp.final_score }}</span>
-                    {% else %}
-                        <span class="badge bg-danger fs-6">{{ insp.final_score }}</span>
-                    {% endif %}
+<div class="iara-card">
+    <div class="iara-card-header">
+        <h2 class="iara-card-title"><i class="bi bi-clipboard2-check"></i> All Inspections</h2>
+        <span class="iara-badge badge-inspector">{{ inspections|length }} total</span>
+    </div>
+    <div class="iara-table-wrapper">
+        <table class="iara-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Vessel</th>
+                    <th>Inspector</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Violations</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for insp in inspections %}
+                <tr>
+                    <td style="font-size:12px;color:var(--text-secondary);">#{{ insp.id }}</td>
+                    <td>
+                        <div style="font-weight:600;font-size:13.5px;">{{ insp.vessel.call_sign }}</div>
+                        <div style="font-size:11px;color:var(--text-secondary);">{{ insp.vessel.international_number }}
+                        </div>
+                    </td>
+                    <td style="font-size:13px;">
+                        {% if insp.inspector %}
+                        {{ insp.inspector.first_name }} {{ insp.inspector.last_name }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td style="font-size:13px;">{{ insp.date.strftime('%d %b %Y') if insp.date else '—' }}</td>
+                    <td>
+                        {% if insp.final_score is not none %}
+                        {% set score = insp.final_score %}
+                        <span
+                            style="font-weight:700;font-size:15px;
+                color:{% if score >= 80 %}var(--iara-success){% elif score >= 60 %}var(--iara-warning){% else %}var(--iara-danger){% endif %};">
+                            {{ score }}
+                        </span>
+                        <span style="font-size:11px;color:var(--text-secondary);">/100</span>
+                        {% else %}
+                        <span style="color:var(--text-secondary);font-size:13px;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set vc = insp.violations|length %}
+                        {% if vc > 0 %}
+                        <span
+                            class="iara-badge {% if vc >= 3 %}badge-sev-critical{% elif vc >= 1 %}badge-sev-medium{% else %}badge-sev-low{% endif %}">
+                            {{ vc }} violation{{ 's' if vc != 1 }}
+                        </span>
+                        {% else %}
+                        <span style="color:var(--text-secondary);font-size:13px;">None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if insp.status == 'approved' %}
+                        <span class="iara-badge badge-status-active"><i class="bi bi-check-circle-fill"></i>
+                            Approved</span>
+                        {% elif insp.status == 'rejected' %}
+                        <span class="iara-badge badge-status-expired"><i class="bi bi-x-circle-fill"></i>
+                            Rejected</span>
+                        {% elif insp.status == 'submitted' %}
+                        <span class="iara-badge badge-sev-medium"><i class="bi bi-clock-fill"></i> Pending</span>
+                        {% else %}
+                        <span class="iara-badge" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">
+                            <i class="bi bi-pencil"></i> {{ insp.status|title }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="d-flex gap-1 justify-content-end flex-wrap">
+                            <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=insp.id) }}"
+                                class="btn-iara-secondary" style="padding:5px 10px;font-size:12px;height:30px;">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            {% if insp.status == 'submitted' %}
+                            <form method="POST"
+                                action="{{ url_for('admin.admin_override_score', inspection_id=insp.id) }}"
+                                onsubmit="return confirm('Approve with current score?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="new_score" value="{{ insp.final_score or insp.score }}">
+                                <button type="submit" class="btn-iara-primary"
+                                    style="padding:5px 10px;font-size:12px;height:30px;">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </button>
+                            </form>
+                            <form method="POST"
+                                action="{{ url_for('admin.admin_reject_inspection', inspection_id=insp.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-iara-danger"
+                                    style="padding:5px 10px;font-size:12px;height:30px;">
+                                    <i class="bi bi-x-circle"></i> Reject
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
                 {% else %}
-                    <span class="text-muted">—</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if insp.status == "submitted" %}
-                <form method="POST"
-                      action="{{ url_for('admin.admin_override_score', inspection_id=insp.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="input-group input-group-sm">
-                        <input type="number" name="new_score" min="0" max="100"
-                               class="form-control" style="width:70px;"
-                               value="{{ insp.final_score or insp.score }}">
-                        <button class="btn btn-success btn-sm">✔</button>
-                    </div>
-                </form>
-                {% else %}
-                <span class="text-muted">—</span>
-                {% endif %}
-            </td>
-            <td class="d-flex gap-1">
-                <a href="{{ url_for('admin.admin_inspection_detail', inspection_id=insp.id) }}"
-                   class="btn btn-sm btn-info">View</a>
-                {% if insp.status == "submitted" %}
-                <form method="POST"
-                      action="{{ url_for('admin.admin_reject_inspection', inspection_id=insp.id) }}"
-                      onsubmit="return confirm('Reject this inspection?');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="btn btn-sm btn-danger">Reject</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<div class="alert alert-info">No inspections recorded yet.</div>
-{% endif %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="bi bi-clipboard2-x"></i>
+                            <h5>No inspections yet</h5>
+                            <p>Inspections submitted by inspectors will appear here.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% endblock %}

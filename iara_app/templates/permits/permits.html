@@ -1,181 +1,192 @@
 {% extends "layout/base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Fishing Permits</h2>
-
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="page-header-left">
+        <h1 class="page-title">Fishing Permits</h1>
+        <p class="page-subtitle">Manage issued commercial, recreational, and scientific permits</p>
+    </div>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('admin.export_permits', **request.args.to_dict()) }}"
-           class="btn btn-outline-success">
-            Export CSV
+        <a href="{{ url_for('admin.export_permits', **request.args.to_dict()) }}" class="btn-iara-secondary"
+            style="color:#059669;border-color:#a7f3d0;background:#ecfdf5;">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
         </a>
-
-        <a href="{{ url_for('admin.add_permit') }}" class="btn btn-primary">
-            Add Permit
+        <a href="{{ url_for('admin.add_permit') }}" class="btn-iara-primary">
+            <i class="bi bi-plus-circle"></i> Add Permit
         </a>
     </div>
 </div>
 
 <!-- FILTER BAR -->
-<div class="card p-3 shadow-sm mb-4">
-    <form method="GET" class="row g-3">
-
-        <!-- Status -->
-        <div class="col-md-2">
-            <label class="form-label">Status</label>
-            <select name="status" class="form-select">
-                <option value="all" {% if request.args.get('status') == 'all' %}selected{% endif %}>All</option>
-                <option value="Active" {% if request.args.get('status') == 'Active' %}selected{% endif %}>Active</option>
-                <option value="Expired" {% if request.args.get('status') == 'Expired' %}selected{% endif %}>Expired</option>
-                <option value="Suspended" {% if request.args.get('status') == 'Suspended' %}selected{% endif %}>Suspended</option>
+<div class="iara-card mb-4" style="overflow:visible;">
+    <form method="GET" class="filter-bar p-3 d-flex flex-wrap gap-3 align-items-end" style="border-bottom:none;">
+        <div style="flex:1;min-width:140px;">
+            <label class="form-label"
+                style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Status</label>
+            <select name="status" class="form-select w-100" style="height:36px;font-size:13px;border-radius:6px;">
+                <option value="all" {% if request.args.get('status')=='all' %}selected{% endif %}>All Statuses</option>
+                <option value="Active" {% if request.args.get('status')=='Active' %}selected{% endif %}>Active</option>
+                <option value="Expired" {% if request.args.get('status')=='Expired' %}selected{% endif %}>Expired
+                </option>
+                <option value="Suspended" {% if request.args.get('status')=='Suspended' %}selected{% endif %}>Suspended
+                </option>
             </select>
         </div>
-
-        <!-- Vessel -->
-        <div class="col-md-3">
-            <label class="form-label">Vessel</label>
-            <select name="vessel_id" class="form-select">
-                <option value="all">All</option>
+        <div style="flex:1;min-width:160px;">
+            <label class="form-label"
+                style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Vessel</label>
+            <select name="vessel_id" class="form-select w-100" style="height:36px;font-size:13px;border-radius:6px;">
+                <option value="all">All Vessels</option>
                 {% for vessel in vessels %}
-                <option value="{{ vessel.id }}"
-                    {% if request.args.get('vessel_id') == vessel.id|string %}selected{% endif %}>
+                <option value="{{ vessel.id }}" {% if request.args.get('vessel_id')==vessel.id|string %}selected{% endif
+                    %}>
                     {{ vessel.call_sign }}
                 </option>
                 {% endfor %}
             </select>
         </div>
-
-        <!-- Permit Type -->
-        <div class="col-md-2">
-            <label class="form-label">Permit Type</label>
-            <select name="permit_type" class="form-select">
-                <option value="all">All</option>
+        <div style="flex:1;min-width:140px;">
+            <label class="form-label"
+                style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Permit
+                Type</label>
+            <select name="permit_type" class="form-select w-100" style="height:36px;font-size:13px;border-radius:6px;">
+                <option value="all">All Types</option>
                 {% for type in ["Commercial", "Recreational", "Scientific", "Transport"] %}
-                <option value="{{ type }}"
-                    {% if request.args.get('permit_type') == type %}selected{% endif %}>
+                <option value="{{ type }}" {% if request.args.get('permit_type')==type %}selected{% endif %}>
                     {{ type }}
                 </option>
                 {% endfor %}
             </select>
         </div>
-
-        <!-- Date From -->
-        <div class="col-md-2">
-            <label class="form-label">Issued From</label>
-            <input type="date" name="date_from" class="form-control"
-                   value="{{ request.args.get('date_from', '') }}">
+        <div style="flex:1;min-width:130px;">
+            <label class="form-label"
+                style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Issued
+                From</label>
+            <input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from', '') }}"
+                style="height:36px;font-size:13px;border-radius:6px;">
         </div>
-
-        <!-- Date To -->
-        <div class="col-md-2">
-            <label class="form-label">Issued To</label>
-            <input type="date" name="date_to" class="form-control"
-                   value="{{ request.args.get('date_to', '') }}">
+        <div style="flex:1;min-width:130px;">
+            <label class="form-label"
+                style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Issued
+                To</label>
+            <input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to', '') }}"
+                style="height:36px;font-size:13px;border-radius:6px;">
         </div>
-
-        <!-- Buttons -->
-        <div class="col-12 d-flex gap-2 mt-2">
-            <button class="btn btn-primary">Apply Filters</button>
-            <a href="{{ url_for('admin.permits') }}" class="btn btn-secondary">Clear</a>
+        <div>
+            <button class="btn-iara-primary" style="height:36px;padding:0 16px;font-size:13px;"><i
+                    class="bi bi-funnel text-white-50"></i> Apply</button>
+            {% if request.args %}
+            <a href="{{ url_for('admin.permits') }}" class="btn-iara-secondary"
+                style="height:36px;padding:5px 12px;font-size:13px;">Clear</a>
+            {% endif %}
         </div>
-
     </form>
 </div>
 
 <!-- PERMITS TABLE -->
-<div class="card p-3 shadow-sm">
-    <table class="table table-striped table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>Permit #</th>
-                <th>Type</th>
-                <th>Vessel</th>
-                <th>Issue Date</th>
-                <th>Expiry Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for permit in permits.items %}
-            <tr>
-                <td>{{ permit.permit_number }}</td>
-                <td>{{ permit.permit_type }}</td>
-                <td>{{ permit.vessel.call_sign }}</td>
-                <td>{{ permit.issue_date }}</td>
-                <td>{{ permit.expiry_date }}</td>
-                <td>
-                    {% if permit.status == "Active" %}
-                        <span class="badge bg-success">Active</span>
-                    {% elif permit.status == "Expired" %}
-                        <span class="badge bg-danger">Expired</span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark">Suspended</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('admin.permit_details', permit_id=permit.id) }}"
-                       class="btn btn-sm btn-outline-secondary">
-                        View
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="iara-card">
+    <div class="iara-card-header">
+        <h2 class="iara-card-title"><i class="bi bi-file-earmark-check"></i> Issued Permits</h2>
+    </div>
+    <div class="iara-table-wrapper">
+        <table class="iara-table">
+            <thead>
+                <tr>
+                    <th>Permit #</th>
+                    <th>Type</th>
+                    <th>Vessel</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for permit in permits.items %}
+                <tr>
+                    <td style="font-weight:600;font-family:monospace;font-size:13px;color:var(--iara-blue);">{{
+                        permit.permit_number }}</td>
+                    <td>
+                        <div style="font-size:13px;"><i class="bi bi-tag text-muted me-1"></i> {{ permit.permit_type }}
+                        </div>
+                    </td>
+                    <td style="font-weight:600;font-size:13px;">{{ permit.vessel.call_sign }}</td>
+                    <td style="font-size:12px;color:var(--text-secondary);">{{ permit.issue_date }}</td>
+                    <td style="font-size:12px;color:var(--text-secondary);">{{ permit.expiry_date }}</td>
+                    <td>
+                        {% if permit.status == "Active" %}
+                        <span class="iara-badge badge-status-active">Active</span>
+                        {% elif permit.status == "Expired" %}
+                        <span class="iara-badge badge-status-expired">Expired</span>
+                        {% else %}
+                        <span class="iara-badge badge-sev-medium">Suspended</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('admin.permit_details', permit_id=permit.id) }}" class="btn-iara-secondary"
+                            style="padding:4px 12px;font-size:12px;">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="bi bi-file-earmark-x text-muted fs-1 mb-2"></i>
+                            <h5 class="mb-1">No permits found</h5>
+                            <p class="text-muted">Adjust your filters or issue a new permit.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <!-- PAGINATION -->
     {% if permits.pages > 1 %}
-    <nav aria-label="Permit pagination" class="mt-3">
-        <ul class="pagination">
+    <div class="p-3" style="border-top:1px solid var(--border-color);display:flex;justify-content:center;">
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <!-- Previous -->
+                {% if permits.has_prev %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="{{ url_for('admin.permits', page=permits.prev_num, **request.args.to_dict()) }}">Prev</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Prev</span></li>
+                {% endif %}
 
-            <!-- Previous -->
-            {% if permits.has_prev %}
-            <li class="page-item">
-                <a class="page-link"
-                   href="{{ url_for('admin.permits', page=permits.prev_num, **request.args.to_dict()) }}">
-                    Previous
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">Previous</span></li>
-            {% endif %}
-
-            <!-- Page numbers -->
-            {% for p in permits.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                <!-- Page numbers -->
+                {% for p in permits.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                 {% if p %}
-                    {% if p == permits.page %}
-                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
-                    {% else %}
-                    <li class="page-item">
-                        <a class="page-link"
-                           href="{{ url_for('admin.permits', page=p, **request.args.to_dict()) }}">
-                            {{ p }}
-                        </a>
-                    </li>
-                    {% endif %}
+                {% if p == permits.page %}
+                <li class="page-item active"><span class="page-link"
+                        style="background:var(--iara-blue);border-color:var(--iara-blue);">{{ p }}</span></li>
+                {% else %}
+                <li class="page-item"><a class="page-link text-dark"
+                        href="{{ url_for('admin.permits', page=p, **request.args.to_dict()) }}">{{ p }}</a></li>
+                {% endif %}
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">…</span></li>
                 {% endif %}
-            {% endfor %}
+                {% endfor %}
 
-            <!-- Next -->
-            {% if permits.has_next %}
-            <li class="page-item">
-                <a class="page-link"
-                   href="{{ url_for('admin.permits', page=permits.next_num, **request.args.to_dict()) }}">
-                    Next
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">Next</span></li>
-            {% endif %}
-
-        </ul>
-    </nav>
+                <!-- Next -->
+                {% if permits.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="{{ url_for('admin.permits', page=permits.next_num, **request.args.to_dict()) }}">Next</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
     {% endif %}
-
 </div>
 
 {% endblock %}

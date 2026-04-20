@@ -1,10 +1,21 @@
 {% extends "layout/base.html" %}
 {% block content %}
-<h2 class="mb-4">Welcome, {{ current_user.first_name }}</h2>
+
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Welcome, {{ current_user.first_name }}</h1>
+    <p class="page-subtitle">Fisherman Dashboard — Manage your vessel, permits, and see inspection status</p>
+  </div>
+</div>
 
 {% if expiring_soon %}
-<div class="alert alert-warning">
-  ⚠️ Your vessel's permit expires in {{ active_permit.days_until_expiry() }} days. Contact the authority to renew.
+<div class="alert alert-warning d-flex align-items-center mb-4"
+  style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;">
+  <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+  <div>
+    <strong>Action Required:</strong> Your vessel's permit expires in <strong>{{ active_permit.days_until_expiry() }}
+      days</strong>. Contact the authority to renew immediately.
+  </div>
 </div>
 {% endif %}
 
@@ -12,96 +23,153 @@
 <div class="row g-3 mb-4">
   <!-- Vessel Card -->
   <div class="col-md-4">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-dark text-white">My Vessel</div>
-      <div class="card-body">
-        <h5>{{ vessel.call_sign }}</h5>
-        <p class="text-muted mb-1">{{ vessel.international_number }}</p>
-        <hr>
-        <p class="mb-1"><strong>Owner:</strong> {{ vessel.owner_name }}</p>
-        <p class="mb-1"><strong>Captain:</strong> {{ vessel.captain_name }}</p>
-        <p class="mb-1"><strong>Length:</strong> {{ vessel.length }}m</p>
-        <p class="mb-0"><strong>Engine:</strong> {{ vessel.engine_power }}HP</p>
+    <div class="iara-card h-100">
+      <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+        <h2 class="iara-card-title text-white"><i class="bi bi-ship"></i> My Vessel</h2>
+      </div>
+      <div class="iara-card-body">
+        <h5 style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">{{ vessel.call_sign }}</h5>
+        <div
+          style="font-size:12px;color:var(--text-secondary);font-family:monospace;letter-spacing:1px;margin-bottom:16px;">
+          {{ vessel.international_number }}
+        </div>
+        <hr style="border-color:var(--border-color);margin:16px 0;">
+        <div class="row g-2" style="font-size:13px;">
+          <div class="col-5 text-muted">Owner:</div>
+          <div class="col-7 fw-bold">{{ vessel.owner_name }}</div>
+          <div class="col-5 text-muted">Captain:</div>
+          <div class="col-7 fw-bold">{{ vessel.captain_name }}</div>
+          <div class="col-5 text-muted">Length:</div>
+          <div class="col-7">{{ vessel.length }}m</div>
+          <div class="col-5 text-muted">Engine:</div>
+          <div class="col-7">{{ vessel.engine_power }}HP</div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Permit Card -->
   <div class="col-md-4">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-dark text-white">Active Permit</div>
-      <div class="card-body">
+    <div class="iara-card h-100">
+      <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+        <h2 class="iara-card-title text-white"><i class="bi bi-file-earmark-check-fill"></i> Active Permit</h2>
+      </div>
+      <div class="iara-card-body">
         {% if active_permit %}
-          <h5>{{ active_permit.permit_number }}</h5>
-          <span class="badge bg-success mb-2">Active</span>
-          <p class="mb-1"><strong>Type:</strong> {{ active_permit.permit_type }}</p>
-          <p class="mb-1"><strong>Issued:</strong> {{ active_permit.issue_date }}</p>
-          <p class="mb-1"><strong>Expires:</strong> {{ active_permit.expiry_date }}</p>
-          {% set days = active_permit.days_until_expiry() %}
-          {% if days <= 30 %}
-            <div class="alert alert-warning py-1 mt-2 mb-0">Expires in {{ days }} days</div>
-          {% else %}
-            <div class="alert alert-success py-1 mt-2 mb-0">{{ days }} days remaining</div>
-          {% endif %}
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h5 style="font-weight:700;font-family:monospace;margin:0;">{{ active_permit.permit_number }}</h5>
+          <span class="iara-badge badge-status-active">Active</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+          <i class="bi bi-tag-fill"></i> {{ active_permit.permit_type }}
+        </div>
+        <div class="row g-2" style="font-size:13px;">
+          <div class="col-5 text-muted">Issued:</div>
+          <div class="col-7 fw-bold">{{ active_permit.issue_date }}</div>
+          <div class="col-5 text-muted">Expires:</div>
+          <div class="col-7 fw-bold">{{ active_permit.expiry_date }}</div>
+        </div>
+        {% set days = active_permit.days_until_expiry() %}
+        <div class="mt-3">
+          {% if days <= 30 %} <div class="alert alert-warning py-2 mb-0 text-center"
+            style="font-size:12px;font-weight:600;">Expires in {{ days }} days</div>
         {% else %}
-          <div class="alert alert-danger mb-0">No active permit on file. Contact the authority immediately.</div>
+        <div class="alert alert-success py-2 mb-0 text-center" style="font-size:12px;font-weight:600;">{{ days }} days
+          remaining</div>
         {% endif %}
       </div>
-    </div>
-  </div>
-
-  <!-- Last Inspection Card -->
-  <div class="col-md-4">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-dark text-white">Last Inspection</div>
-      <div class="card-body">
-        {% if last_inspection %}
-          {% set score = last_inspection.final_score if last_inspection.final_score is not none else last_inspection.score %}
-          <div class="text-center mb-3">
-            <div class="display-4 fw-bold
-              {% if score >= 80 %}text-success
-              {% elif score >= 60 %}text-warning
-              {% else %}text-danger{% endif %}">{{ score }}</div>
-            <div class="text-muted">out of 100</div>
-          </div>
-          <p class="mb-1"><strong>Date:</strong> {{ last_inspection.date }}</p>
-          <p class="mb-1"><strong>Location:</strong> {{ last_inspection.location }}</p>
-          <p class="mb-0">
-            <strong>Status:</strong>
-            {% if last_inspection.status == "approved" %}<span class="badge bg-success">Approved</span>
-            {% elif last_inspection.status == "submitted" %}<span class="badge bg-primary">Under Review</span>
-            {% else %}<span class="badge bg-secondary">{{ last_inspection.status }}</span>
-            {% endif %}
-          </p>
-        {% else %}
-          <p class="text-muted">No inspections on record for your vessel.</p>
-        {% endif %}
+      {% else %}
+      <div class="empty-state">
+        <i class="bi bi-file-earmark-x text-danger fs-1"></i>
+        <h6 class="mt-2 text-danger">No active permit</h6>
+        <p style="font-size:12px;">Contact the authority immediately to renew your fishing permit.</p>
       </div>
+      {% endif %}
     </div>
   </div>
 </div>
 
+<!-- Last Inspection Card -->
+<div class="col-md-4">
+  <div class="iara-card h-100">
+    <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+      <h2 class="iara-card-title text-white"><i class="bi bi-clipboard2-check"></i> Last Inspection</h2>
+    </div>
+    <div class="iara-card-body text-center d-flex flex-column justify-content-center">
+      {% if last_inspection %}
+      {% set score = last_inspection.final_score if last_inspection.final_score is not none else last_inspection.score
+      %}
+      <div class="mb-3">
+        <div
+          style="font-size:48px;font-weight:800;line-height:1;
+              color:{% if score >= 80 %}var(--iara-success){% elif score >= 60 %}var(--iara-warning){% else %}var(--iara-danger){% endif %};">
+          {{ score }}
+        </div>
+        <div
+          style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);font-weight:600;">
+          Out of 100</div>
+      </div>
+      <div
+        style="font-size:13px;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid var(--border-color);text-align:left;">
+        <div class="mb-1"><strong>Date:</strong> <span class="float-end">{{ last_inspection.date }}</span></div>
+        <div class="mb-1"><strong>Location:</strong> <span class="float-end">{{ last_inspection.location }}</span></div>
+        <div><strong>Status:</strong>
+          <span class="float-end">
+            {% if last_inspection.status == "approved" %}<span class="iara-badge badge-status-active">Approved</span>
+            {% elif last_inspection.status == "submitted" %}<span class="iara-badge badge-inspector"
+              style="background:#1d4ed8;color:#fff;">Under Review</span>
+            {% else %}<span class="iara-badge">{{ last_inspection.status|title }}</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="bi bi-clipboard-x text-muted fs-1"></i>
+        <h6 class="mt-2 text-muted">No inspections</h6>
+        <p style="font-size:12px;">No inspections on record for your vessel yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- Open Violations -->
 {% if open_violations %}
-<div class="card shadow-sm mb-4">
-  <div class="card-header bg-danger text-white">Open Violations ({{ open_violations|length }})</div>
-  <div class="card-body p-0">
-    <table class="table table-bordered mb-0">
-      <thead class="table-light">
-        <tr><th>Code</th><th>Severity</th><th>Description</th><th>Recorded</th></tr>
+<div class="iara-card">
+  <div class="iara-card-header" style="background:#fef2f2;border-bottom-color:#fca5a5;">
+    <h2 class="iara-card-title text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Open Violations</h2>
+    <span class="iara-badge badge-sev-critical">{{ open_violations|length }} unresolved</span>
+  </div>
+  <div class="iara-table-wrapper">
+    <table class="iara-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Severity</th>
+          <th>Description</th>
+          <th>Date Recorded</th>
+        </tr>
       </thead>
       <tbody>
         {% for v in open_violations %}
         <tr>
-          <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
-          <td>
-            {% if v.severity == "Critical" %}<span class="badge bg-danger">Critical</span>
-            {% elif v.severity == "High" %}<span class="badge" style="background:#fd7e14">High</span>
-            {% elif v.severity == "Medium" %}<span class="badge bg-warning text-dark">Medium</span>
-            {% else %}<span class="badge bg-secondary">Low</span>{% endif %}
+          <td style="font-family:monospace;font-size:13px;font-weight:600;">
+            {{ v.violation_code.code if v.violation_code else "—" }}
           </td>
-          <td>{{ v.description or "—" }}</td>
-          <td>{{ v.created_at.strftime('%Y-%m-%d') }}</td>
+          <td>
+            {% if v.severity == "Critical" %}<span class="iara-badge badge-sev-critical">Critical</span>
+            {% elif v.severity == "High" %}<span class="iara-badge badge-sev-high">High</span>
+            {% elif v.severity == "Medium" %}<span class="iara-badge badge-sev-medium">Medium</span>
+            {% else %}<span class="iara-badge badge-sev-low">Low</span>{% endif %}
+          </td>
+          <td style="font-size:13px;max-width:300px;">
+            {{ v.description or "—" }}
+          </td>
+          <td style="font-size:12px;color:var(--text-secondary);">
+            {{ v.created_at.strftime('%Y-%m-%d') }}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -111,8 +179,14 @@
 {% endif %}
 
 {% else %}
-<div class="alert alert-info">
-  Your account is not linked to a vessel yet. Please contact the administrator and provide your vessel registration number.
+<div class="empty-state py-5 mt-4 border bg-white" style="border-radius:12px;">
+  <div
+    style="width:64px;height:64px;background:#e2e8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+    <i class="bi bi-ship fs-2 text-secondary"></i>
+  </div>
+  <h4>No Vessel Linked</h4>
+  <p class="text-muted" style="max-width:400px;margin:0 auto 20px;">Your account is not linked to any vessel. Please
+    contact the administrator and provide your vessel registration number to access your dashboard.</p>
 </div>
 {% endif %}
 {% endblock %}

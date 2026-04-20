@@ -1,51 +1,126 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Evidence — Violation #{{ violation.id }}</h2>
-    <a href="{{ url_for('admin.admin_violations') }}" class="btn btn-secondary">← Back</a>
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="page-header-left">
+        <h1 class="page-title">Evidence Viewer</h1>
+        <p class="page-subtitle">Violation #{{ violation.id }} assigned to Inspector: {{
+            violation.inspection.inspector.first_name }} {{ violation.inspection.inspector.last_name }}</p>
+    </div>
+    <a href="{{ url_for('admin.admin_violations') }}" class="btn-iara-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Violations
+    </a>
 </div>
 
-<div class="card mb-3 shadow-sm">
-    <div class="card-header bg-dark text-white">Violation Info</div>
-    <div class="card-body">
-        <p><strong>Code:</strong> {{ violation.violation_code.code if violation.violation_code else "—" }}</p>
-        <p><strong>Severity:</strong> {{ violation.severity }}</p>
-        <p><strong>Description:</strong> {{ violation.description or "—" }}</p>
-        <p><strong>Status:</strong>
-            {% if violation.status == "open" %}<span class="badge bg-danger">Open</span>
-            {% elif violation.status == "corrected" %}<span class="badge bg-warning text-dark">Corrected</span>
-            {% elif violation.status == "approved" %}<span class="badge bg-success">Approved</span>
-            {% elif violation.status == "rejected" %}<span class="badge bg-secondary">Rejected</span>
-            {% endif %}
-        </p>
-        {% if violation.resolution_notes %}
-        <p><strong>Resolution Notes:</strong> {{ violation.resolution_notes }}</p>
-        {% endif %}
+<div class="iara-card mb-4" style="border-radius:12px;overflow:visible;">
+    <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+        <h2 class="iara-card-title text-white"><i class="bi bi-exclamation-triangle-fill"></i> Violation Synopsis</h2>
+    </div>
+    <div class="iara-card-body p-4 pb-0">
+        <div class="row">
+
+            <div class="col-md-5 mb-4">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div>
+                        <div class="text-muted"
+                            style="font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Code
+                        </div>
+                        <div style="font-family:monospace;font-size:20px;font-weight:700;">{{
+                            violation.violation_code.code if violation.violation_code else "—" }}</div>
+                    </div>
+                    <div style="border-left:1px solid var(--border-color);height:40px;"></div>
+                    <div>
+                        <div class="text-muted"
+                            style="font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:5px;">Severity
+                        </div>
+                        <div>
+                            {% if violation.severity == "Critical" %}<span
+                                class="iara-badge badge-sev-critical">Critical</span>
+                            {% elif violation.severity == "High" %}<span class="iara-badge badge-sev-high">High</span>
+                            {% elif violation.severity == "Medium" %}<span
+                                class="iara-badge badge-sev-medium">Medium</span>
+                            {% else %}<span class="iara-badge badge-sev-low">Low</span>{% endif %}
+                        </div>
+                    </div>
+                    <div style="border-left:1px solid var(--border-color);height:40px;"></div>
+                    <div>
+                        <div class="text-muted"
+                            style="font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:5px;">Status
+                        </div>
+                        <div>
+                            {% if violation.status == "open" %}<span class="iara-badge badge-sev-critical">Open</span>
+                            {% elif violation.status == "corrected" %}<span
+                                class="iara-badge badge-sev-medium">Corrected</span>
+                            {% elif violation.status == "approved" %}<span
+                                class="iara-badge badge-status-active">Approved</span>
+                            {% elif violation.status == "rejected" %}<span
+                                class="iara-badge badge-status-expired">Rejected</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7 mb-4">
+                <div class="text-muted"
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Description of
+                    Incident</div>
+                <div class="p-3 rounded"
+                    style="background:#f8fafc;border:1px solid var(--border-color);font-size:13px;line-height:1.5;">
+                    {{ violation.description or "—" }}
+                </div>
+
+                {% if violation.resolution_notes %}
+                <div class="mt-3 text-muted"
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Resolution Notes
+                </div>
+                <div class="p-3 rounded"
+                    style="background:#fdfce8;border:1px solid #fef08a;font-size:13px;line-height:1.5;color:#854d0e;">
+                    <i class="bi bi-info-circle me-1"></i> {{ violation.resolution_notes }}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
     </div>
 </div>
+
+<h4 class="mb-3"><i class="bi bi-images text-muted me-2"></i> Attached Evidence Files</h4>
 
 {% if violation.evidence %}
-<div class="row">
+<div class="row g-4 mb-5">
     {% for e in violation.evidence %}
-    <div class="col-md-3 mb-4 text-center">
-        <img src="{{ url_for('static', filename=e.file_path) }}"
-             class="img-thumbnail"
-             data-bs-toggle="modal"
-             data-bs-target="#modal{{ e.id }}"
-             style="height:150px;width:100%;object-fit:cover;cursor:pointer;">
-        <p class="mt-1 text-muted" style="font-size:0.85rem;">{{ e.note if e.note else "—" }}</p>
+    <div class="col-md-4 col-lg-3">
+        <div class="iara-card h-100 evidence-card"
+            style="transition:transform .2s;cursor:pointer;border-radius:12px;overflow:hidden;" data-bs-toggle="modal"
+            data-bs-target="#modal{{ e.id }}" onmouseover="this.style.transform='translateY(-4px)'"
+            onmouseout="this.style.transform='translateY(0)'">
+            <div style="height:180px;width:100%;background:#e2e8f0;position:relative;">
+                <img src="{{ url_for('static', filename=e.file_path) }}"
+                    style="width:100%;height:100%;object-fit:cover;">
+                <div
+                    style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:20px 10px 10px;text-align:center;">
+                    <i class="bi bi-arrows-fullscreen text-white opacity-75"></i>
+                </div>
+            </div>
+            <div class="p-3 text-center" style="background:#fff;">
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.4;">{{ e.note if e.note else "No
+                    caption provided" }}</div>
+            </div>
+        </div>
     </div>
 
-    <div class="modal fade" id="modal{{ e.id }}" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-body p-0">
-                    <img src="{{ url_for('static', filename=e.file_path) }}" class="w-100">
-                </div>
-                <div class="modal-footer">
-                    <span class="me-auto">{{ e.note if e.note else "" }}</span>
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    <!-- Modal for full size -->
+    <div class="modal fade" id="modal{{ e.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content" style="background:transparent;border:none;">
+                <div class="modal-body text-center p-0 position-relative">
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+                        data-bs-dismiss="modal" style="z-index:10;"></button>
+                    <img src="{{ url_for('static', filename=e.file_path) }}" class="img-fluid rounded shadow-lg"
+                        style="max-height:85vh;">
+                    <div class="mt-3 text-white fs-5" style="text-shadow:0 2px 4px rgba(0,0,0,0.5);">{{ e.note if e.note
+                        else "Evidence File" }}</div>
                 </div>
             </div>
         </div>
@@ -53,7 +128,11 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="alert alert-info">No evidence uploaded for this violation.</div>
+<div class="empty-state py-5 mb-5 bg-white border" style="border-radius:12px;">
+    <i class="bi bi-camera-slash fs-1 text-muted mb-2"></i>
+    <h5>No Evidence Attached</h5>
+    <p class="text-muted">No files have been uploaded by the inspector for this violation.</p>
+</div>
 {% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

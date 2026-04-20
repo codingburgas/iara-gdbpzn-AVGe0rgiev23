@@ -1,91 +1,287 @@
 {% extends "layout/base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>User Management</h2>
-  <span class="badge bg-secondary fs-6">{{ users|length }} users</span>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">User Management</h1>
+    <p class="page-subtitle">Manage system accounts, roles, and access levels</p>
+  </div>
+  <div>
+    <a href="{{ url_for('admin.admin_create_user') }}" class="btn-iara-primary">
+      <i class="bi bi-person-plus-fill"></i> Create User
+    </a>
+  </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% for category, message in messages %}
-    <div class="alert alert-{{ category }} alert-dismissible fade show py-2">
-      {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2">
+    <div class="kpi-card blue">
+      <div class="kpi-icon blue"><i class="bi bi-people-fill"></i></div>
+      <div class="kpi-value">{{ stats.total }}</div>
+      <div class="kpi-label">Total Users</div>
     </div>
-  {% endfor %}
-{% endwith %}
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card purple">
+      <div class="kpi-icon purple"><i class="bi bi-shield-fill"></i></div>
+      <div class="kpi-value">{{ stats.administrators }}</div>
+      <div class="kpi-label">Admins</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card teal">
+      <div class="kpi-icon teal"><i class="bi bi-clipboard2-check-fill"></i></div>
+      <div class="kpi-value">{{ stats.inspectors }}</div>
+      <div class="kpi-label">Inspectors</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card green">
+      <div class="kpi-icon green"><i class="bi bi-water"></i></div>
+      <div class="kpi-value">{{ stats.fishermen }}</div>
+      <div class="kpi-label">Fishermen</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card amber">
+      <div class="kpi-icon amber"><i class="bi bi-person-fill"></i></div>
+      <div class="kpi-value">{{ stats.amateurs }}</div>
+      <div class="kpi-label">Amateurs</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card red">
+      <div class="kpi-icon red"><i class="bi bi-person-x-fill"></i></div>
+      <div class="kpi-value">{{ stats.inactive }}</div>
+      <div class="kpi-label">Inactive</div>
+    </div>
+  </div>
+</div>
 
-<div class="card shadow-sm">
-  <div class="card-body p-0">
-    <table class="table table-bordered table-hover align-middle mb-0">
-      <thead class="table-dark">
+<!-- Main Table Card -->
+<div class="iara-card">
+  <div class="iara-card-header">
+    <h2 class="iara-card-title"><i class="bi bi-people"></i> User Accounts</h2>
+    <span class="iara-badge badge-inspector">{{ users|length }} result{{ 's' if users|length != 1 }}</span>
+  </div>
+
+  <!-- Filter Bar -->
+  <form method="GET" action="{{ url_for('admin.admin_users') }}">
+    <div class="filter-bar">
+      <!-- Search -->
+      <div class="search-input-wrap flex-grow-1" style="min-width:200px;max-width:300px;">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" class="form-control" placeholder="Search name or email…" value="{{ search_q }}"
+          style="height:36px;font-size:13px;border-radius:6px;">
+      </div>
+
+      <!-- Role Filter -->
+      <select name="role" class="form-select" style="width:160px;height:36px;font-size:13px;">
+        <option value="">All Roles</option>
+        <option value="administrator" {% if role_filter=='administrator' %}selected{% endif %}>Administrator</option>
+        <option value="inspector" {% if role_filter=='inspector' %}selected{% endif %}>Inspector</option>
+        <option value="fisherman" {% if role_filter=='fisherman' %}selected{% endif %}>Fisherman</option>
+        <option value="amateur" {% if role_filter=='amateur' %}selected{% endif %}>Amateur Fisher</option>
+      </select>
+
+      <!-- Status Filter -->
+      <select name="status" class="form-select" style="width:140px;height:36px;font-size:13px;">
+        <option value="">All Status</option>
+        <option value="active" {% if status_filter=='active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status_filter=='inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+
+      <button type="submit" class="btn-iara-primary" style="height:36px;padding:0 14px;font-size:13px;">
+        <i class="bi bi-funnel"></i> Filter
+      </button>
+      {% if role_filter or status_filter or search_q %}
+      <a href="{{ url_for('admin.admin_users') }}" class="btn-iara-secondary"
+        style="height:36px;padding:0 12px;font-size:13px;">
+        <i class="bi bi-x-circle"></i> Clear
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="iara-table-wrapper">
+    <table class="iara-table">
+      <thead>
         <tr>
-          <th>#</th>
-          <th>Name</th>
+          <th>ID</th>
+          <th>User</th>
           <th>Email</th>
           <th>Role</th>
           <th>Status</th>
-          <th>Failed Logins</th>
+          <th>Security</th>
           <th>Joined</th>
-          <th>Actions</th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for u in users %}
-        <tr class="{% if not u.is_active %}table-secondary{% endif %}">
-          <td>{{ u.id }}</td>
+        <tr class="{% if not u.is_active %}inactive{% endif %}">
+          <td style="color:var(--text-secondary);font-size:12px;">#{{ u.id }}</td>
+
+          <!-- User -->
           <td>
-            <strong>{{ u.first_name }} {{ u.last_name }}</strong>
-            {% if u.id == current_user.id %}
-              <span class="badge bg-info text-dark ms-1">You</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div
+                style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--iara-blue),var(--iara-teal));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">
+                {{ u.first_name[0]|upper }}{{ u.last_name[0]|upper }}
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:13.5px;">
+                  {{ u.first_name }} {{ u.last_name }}
+                  {% if u.id == current_user.id %}
+                  <span class="iara-badge badge-inspector ms-1" style="font-size:10px;">You</span>
+                  {% endif %}
+                </div>
+                <div style="font-size:11px;color:var(--text-secondary);">{{ u.phone }}</div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Email -->
+          <td style="font-size:13px;">{{ u.email }}</td>
+
+          <!-- Role Badge -->
+          <td>
+            {% if u.role == 'administrator' %}
+            <span class="iara-badge badge-admin"><i class="bi bi-shield-fill"></i> Admin</span>
+            {% elif u.role == 'inspector' %}
+            <span class="iara-badge badge-inspector"><i class="bi bi-clipboard2-check"></i> Inspector</span>
+            {% elif u.role == 'fisherman' %}
+            <span class="iara-badge badge-fisherman"><i class="bi bi-water"></i> Fisherman</span>
+            {% else %}
+            <span class="iara-badge badge-amateur"><i class="bi bi-person"></i> Amateur</span>
             {% endif %}
           </td>
-          <td>{{ u.email }}</td>
-          <td>
-            {% if u.role == 'administrator' %}<span class="badge bg-dark">Admin</span>
-            {% elif u.role == 'inspector' %}<span class="badge bg-primary">Inspector</span>
-            {% elif u.role == 'fisherman' %}<span class="badge bg-success">Fisherman</span>
-            {% else %}<span class="badge bg-warning text-dark">Amateur</span>
-            {% endif %}
-          </td>
+
+          <!-- Status -->
           <td>
             {% if u.is_active %}
-              <span class="badge bg-success">Active</span>
+            <span class="iara-badge badge-active"><i class="bi bi-circle-fill" style="font-size:7px;"></i> Active</span>
             {% else %}
-              <span class="badge bg-danger">Inactive</span>
+            <span class="iara-badge badge-inactive"><i class="bi bi-circle-fill" style="font-size:7px;"></i>
+              Inactive</span>
             {% endif %}
           </td>
+
+          <!-- Security / Logins -->
           <td>
             {% if u.locked_until and u.locked_until > now %}
-              <span class="badge bg-danger">Locked</span>
-              <small class="text-muted d-block">{{ u.failed_logins }} attempts</small>
+            <span class="iara-badge badge-locked"><i class="bi bi-lock-fill"></i> Locked</span>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">{{ u.failed_logins }} attempts</div>
             {% elif u.failed_logins and u.failed_logins > 0 %}
-              <span class="text-warning fw-bold">{{ u.failed_logins }}</span>
+            <span style="color:var(--iara-warning);font-size:13px;font-weight:600;">{{ u.failed_logins }} fail{{ 's' if
+              u.failed_logins != 1 }}</span>
             {% else %}
-              <span class="text-muted">0</span>
+            <span style="color:var(--text-secondary);font-size:13px;">—</span>
             {% endif %}
           </td>
-          <td style="font-size:.85rem;">{{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '—' }}</td>
-          <td>
-            <div class="d-flex gap-1 flex-wrap">
-              {% if u.id != current_user.id %}
-                <form method="POST" action="{{ url_for('admin.admin_toggle_user', user_id=u.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="btn btn-xs btn-sm {% if u.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
-                    {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
-                  </button>
-                </form>
-              {% endif %}
-              {% if u.failed_logins and u.failed_logins > 0 or (u.locked_until and u.locked_until > now) %}
-                <form method="POST" action="{{ url_for('admin.admin_unlock_user', user_id=u.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="btn btn-sm btn-outline-warning">Unlock</button>
-                </form>
-              {% endif %}
-              <form method="POST"
-                    action="{{ url_for('admin.admin_reset_user_password', user_id=u.id) }}"
-                    onsubmit="return confirm('Reset password for {{ u.email }}? A temporary password will be shown.');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="btn btn-sm btn-outline-secondary">Reset Pwd</button>
-              </form>
+
+          <!-- Joined -->
+          <td style="font-size:12px;color:var(--text-secondary);">
+            {{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}
+          </td>
+
+          <!-- Actions Dropdown -->
+          <td style="text-align:right;">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false" style="font-size:12px;border-radius:6px;border-color:var(--border-color);">
+                <i class="bi bi-three-dots"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" style="min-width:200px;">
+
+                <!-- Edit -->
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}">
+                    <i class="bi bi-pencil-fill text-primary"></i> Edit Profile
+                  </a>
+                </li>
+
+                <!-- Change Role (submenu via modal) -->
+                {% if u.id != current_user.id %}
+                <li>
+                  <a class="dropdown-item" href="#"
+                    onclick="openRoleModal({{ u.id }}, '{{ u.first_name }} {{ u.last_name }}', '{{ u.role }}'); return false;">
+                    <i class="bi bi-arrow-left-right text-warning"></i> Change Role
+                  </a>
+                </li>
+                {% endif %}
+
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+
+                <!-- Toggle Active -->
+                {% if u.id != current_user.id %}
+                <li>
+                  <form method="POST" action="{{ url_for('admin.admin_toggle_user', user_id=u.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit"
+                      class="dropdown-item {% if u.is_active %}text-warning{% else %}text-success{% endif %}">
+                      {% if u.is_active %}
+                      <i class="bi bi-pause-circle"></i> Deactivate
+                      {% else %}
+                      <i class="bi bi-play-circle"></i> Activate
+                      {% endif %}
+                    </button>
+                  </form>
+                </li>
+                {% endif %}
+
+                <!-- Unlock -->
+                {% if u.failed_logins and u.failed_logins > 0 or (u.locked_until and u.locked_until > now) %}
+                <li>
+                  <form method="POST" action="{{ url_for('admin.admin_unlock_user', user_id=u.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item text-info">
+                      <i class="bi bi-unlock-fill"></i> Unlock Account
+                    </button>
+                  </form>
+                </li>
+                {% endif %}
+
+                <!-- Reset Password -->
+                <li>
+                  <form method="POST" action="{{ url_for('admin.admin_reset_user_password', user_id=u.id) }}"
+                    onsubmit="return confirm('Reset password for {{ u.email }}? Temporary password will be shown.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item">
+                      <i class="bi bi-key-fill text-secondary"></i> Reset Password
+                    </button>
+                  </form>
+                </li>
+
+                <!-- Delete -->
+                {% if u.id != current_user.id %}
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                <li>
+                  <a class="dropdown-item text-danger" href="#"
+                    onclick="openDeleteModal({{ u.id }}, '{{ u.first_name }} {{ u.last_name }}', '{{ u.email }}'); return false;">
+                    <i class="bi bi-trash3-fill"></i> Delete User
+                  </a>
+                </li>
+                {% endif %}
+
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-person-slash"></i>
+              <h5>No users found</h5>
+              <p>Try adjusting your search or filter criteria.</p>
             </div>
           </td>
         </tr>
@@ -94,4 +290,99 @@
     </table>
   </div>
 </div>
+
+
+<!-- ── CHANGE ROLE MODAL ───────────────────────────── -->
+<div class="modal fade" id="roleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:12px;overflow:hidden;">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-arrow-left-right"></i> Change User Role</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3" style="font-size:13px;">
+          Changing the role of <strong id="roleModalUserName"></strong> will affect their system access immediately.
+        </p>
+        <form id="roleForm" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="iara-form-group">
+            <label>Select New Role</label>
+            <select name="new_role" id="roleSelect" class="form-select">
+              <option value="administrator">Administrator — Full system access</option>
+              <option value="inspector">Inspector — Conduct & submit inspections</option>
+              <option value="fisherman">Fisherman — View own permits & violations</option>
+              <option value="amateur">Amateur Fisher — Basic access only</option>
+            </select>
+          </div>
+          <div class="mt-3 p-3"
+            style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12.5px;color:#92400e;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            This action is logged in the system audit trail.
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-iara-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn-iara-primary" onclick="document.getElementById('roleForm').submit();">
+          <i class="bi bi-check-circle"></i> Confirm Role Change
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── DELETE CONFIRMATION MODAL ──────────────────── -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:12px;overflow:hidden;">
+      <div class="modal-header" style="background:#7f1d1d;">
+        <h5 class="modal-title"><i class="bi bi-trash3"></i> Delete User Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:14px;">
+          You are about to <strong class="text-danger">permanently delete</strong> the account for:
+        </p>
+        <div class="p-3 mb-3" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
+          <div style="font-weight:700;" id="deleteModalName"></div>
+          <div style="font-size:13px;color:#6b7a99;" id="deleteModalEmail"></div>
+        </div>
+        <p class="text-muted" style="font-size:13px;">
+          This action <strong>cannot be undone</strong>. Users with inspection records cannot be deleted — deactivate
+          them instead.
+        </p>
+        <form id="deleteForm" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-iara-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn-iara-danger" onclick="document.getElementById('deleteForm').submit();">
+          <i class="bi bi-trash3-fill"></i> Delete Permanently
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function openRoleModal(userId, userName, currentRole) {
+    document.getElementById('roleModalUserName').textContent = userName;
+    document.getElementById('roleForm').action = `/admin/users/${userId}/change-role`;
+    document.getElementById('roleSelect').value = currentRole;
+    new bootstrap.Modal(document.getElementById('roleModal')).show();
+  }
+
+  function openDeleteModal(userId, userName, userEmail) {
+    document.getElementById('deleteModalName').textContent = userName;
+    document.getElementById('deleteModalEmail').textContent = userEmail;
+    document.getElementById('deleteForm').action = `/admin/users/${userId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+  }
+</script>
 {% endblock %}

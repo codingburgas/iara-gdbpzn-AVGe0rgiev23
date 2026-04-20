@@ -1,0 +1,210 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Edit User Account</h1>
+        <p class="page-subtitle">
+            Editing <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+            &nbsp;·&nbsp; {{ user.email }}
+        </p>
+    </div>
+    <a href="{{ url_for('admin.admin_users') }}" class="btn-iara-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Users
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="iara-card">
+            <div class="iara-card-header">
+                <h2 class="iara-card-title"><i class="bi bi-pencil-square"></i> User Details</h2>
+                {% if is_self %}
+                <span class="iara-badge badge-inspector"><i class="bi bi-person-circle"></i> Your Account</span>
+                {% endif %}
+            </div>
+            <div class="iara-card-body">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.first_name.label() }}
+                                {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else
+                                "")) }}
+                                {% for e in form.first_name.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.last_name.label() }}
+                                {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else
+                                "")) }}
+                                {% for e in form.last_name.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.email.label() }}
+                                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                                {% for e in form.email.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.phone.label() }}
+                                {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else "")) }}
+                                {% for e in form.phone.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Role -->
+                    <div class="mt-3">
+                        <div class="iara-form-group">
+                            {{ form.role.label() }}
+                            {% if is_self %}
+                            <!-- Self — disable role change, show current role info box -->
+                            {{ form.role(class="form-select", disabled=true) }}
+                            <div class="mt-2 p-3"
+                                style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12.5px;color:#92400e;">
+                                <i class="bi bi-lock-fill me-1"></i>
+                                You cannot change your own role.
+                            </div>
+                            <!-- Hidden field to submit the real value -->
+                            <input type="hidden" name="role" value="{{ user.role }}">
+                            {% else %}
+                            {{ form.role(class="form-select" + (" is-invalid" if form.role.errors else "")) }}
+                            {% for e in form.role.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Active Status -->
+                    <div class="mt-1 p-3"
+                        style="background:#f8fafc;border:1px solid var(--border-color);border-radius:8px;">
+                        <div class="form-check">
+                            {% if is_self %}
+                            {{ form.is_active(class="form-check-input", id="activeCheck", disabled=true) }}
+                            <input type="hidden" name="is_active" value="{{ 'y' if user.is_active else '' }}">
+                            {% else %}
+                            {{ form.is_active(class="form-check-input", id="activeCheck") }}
+                            {% endif %}
+                            <label class="form-check-label fw-semibold" for="activeCheck" style="font-size:14px;">
+                                Account Active
+                            </label>
+                            <div class="text-muted" style="font-size:12px;margin-top:2px;">
+                                {% if is_self %}You cannot deactivate your own account.
+                                {% else %}Uncheck to suspend this user's access immediately.{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border-color:var(--border-color);margin:24px 0;">
+
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn-iara-primary") }}
+                        <a href="{{ url_for('admin.admin_users') }}" class="btn-iara-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side info -->
+    <div class="col-lg-5">
+        <!-- Account Info Card -->
+        <div class="iara-card mb-3">
+            <div class="iara-card-header">
+                <h2 class="iara-card-title"><i class="bi bi-person-badge"></i> Account Info</h2>
+            </div>
+            <div class="iara-card-body" style="padding:0;">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--border-color);">
+                    <div
+                        style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.1em;margin-bottom:2px;">
+                        Member Since</div>
+                    <div style="font-weight:600;font-size:13.5px;">
+                        {{ user.created_at.strftime('%d %B %Y') if user.created_at else '—' }}
+                    </div>
+                </div>
+                <div style="padding:14px 20px;border-bottom:1px solid var(--border-color);">
+                    <div
+                        style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.1em;margin-bottom:2px;">
+                        Current Role</div>
+                    <div style="font-weight:600;font-size:13.5px;">
+                        {% if user.role == 'administrator' %}<span class="iara-badge badge-admin"><i
+                                class="bi bi-shield-fill"></i> Administrator</span>
+                        {% elif user.role == 'inspector' %}<span class="iara-badge badge-inspector"><i
+                                class="bi bi-clipboard2-check"></i> Inspector</span>
+                        {% elif user.role == 'fisherman' %}<span class="iara-badge badge-fisherman"><i
+                                class="bi bi-water"></i> Fisherman</span>
+                        {% else %}<span class="iara-badge badge-amateur"><i class="bi bi-person"></i> Amateur</span>{%
+                        endif %}
+                    </div>
+                </div>
+                <div style="padding:14px 20px;border-bottom:1px solid var(--border-color);">
+                    <div
+                        style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.1em;margin-bottom:2px;">
+                        Login Status</div>
+                    <div>
+                        {% if user.locked_until %}
+                        <span class="iara-badge badge-locked"><i class="bi bi-lock-fill"></i> Locked</span>
+                        {% elif user.failed_logins > 0 %}
+                        <span style="color:var(--iara-warning);font-weight:600;">{{ user.failed_logins }} failed
+                            attempt(s)</span>
+                        {% else %}
+                        <span style="color:var(--iara-success);font-weight:600;"><i class="bi bi-check-circle"></i>
+                            Normal</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div style="padding:14px 20px;">
+                    <div
+                        style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.1em;margin-bottom:2px;">
+                        Inspections Done</div>
+                    <div style="font-weight:700;font-size:20px;color:var(--iara-blue);">
+                        {{ user.inspections | length }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        {% if not is_self %}
+        <div class="iara-card" style="border-color:#fca5a5;">
+            <div class="iara-card-header" style="background:#fef2f2;border-bottom-color:#fca5a5;">
+                <h2 class="iara-card-title" style="color:#dc2626;"><i class="bi bi-exclamation-triangle-fill"></i>
+                    Danger Zone</h2>
+            </div>
+            <div class="iara-card-body">
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+                    Permanently delete this user. Cannot be undone if they have inspection records.
+                </p>
+                <form method="POST" action="{{ url_for('admin.admin_delete_user', user_id=user.id) }}"
+                    onsubmit="return confirm('This will permanently delete {{ user.email }}. Are you absolutely sure?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-iara-danger" style="font-size:13px;">
+                        <i class="bi bi-trash3-fill"></i> Delete This Account
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

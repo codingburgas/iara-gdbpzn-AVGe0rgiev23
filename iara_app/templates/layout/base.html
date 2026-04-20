@@ -1,154 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>{{ title if title else "IARA System" }}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if title %}{{ title }} — IARA{% else %}IARA System{% endif %}</title>
 
-    <!-- Bootstrap 5 -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-        rel="stylesheet">
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Custom Styles -->
-    <style>
-        body {
-            background-color: #f5f7fa;
-            font-family: Arial, sans-serif;
-        }
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-        .sidebar {
-            width: 240px;
-            height: 100vh;
-            background: #1e293b;
-            color: white;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding: 20px;
-        }
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
-        .sidebar h2 {
-            font-size: 22px;
-            margin-bottom: 30px;
-        }
-
-        .sidebar a {
-            display: block;
-            color: #cbd5e1;
-            text-decoration: none;
-            padding: 10px 0;
-            font-size: 16px;
-        }
-
-        .sidebar a:hover {
-            color: white;
-        }
-
-        .content {
-            margin-left: 260px;
-            padding: 30px;
-        }
-
-        .topbar {
-            background: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-    </style>
+  <!-- IARA Theme -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/iara_theme.css') }}">
 </head>
 
 <body>
 
-    <!-- Sidebar -->
-<div class="sidebar">
-    <h2>
-        {% if current_user.role == "administrator" %}
-            IARA Admin
-        {% elif current_user.role == "inspector" %}
-            IARA Inspector
-        {% elif current_user.role == "fisherman" %}
-            IARA Fisherman
-        {% else %}
-            IARA User
-        {% endif %}
-    </h2>
+  <!-- ═══════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════ -->
+  {% if current_user.is_authenticated %}
+  <aside class="iara-sidebar">
 
-    <ul class="nav flex-column">
+    <!-- Brand -->
+    <a class="sidebar-brand" href="#">
+      <div class="sidebar-brand-icon">🌊</div>
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-name">IARA</div>
+        <div class="sidebar-brand-sub">Fisheries Authority</div>
+      </div>
+    </a>
 
-        {# ----------------------------- #}
-        {# ADMIN MENU                   #}
-        {# ----------------------------- #}
-        {% if current_user.role == "administrator" %}
-            <li><a href="{{ url_for('admin.admin_dashboard') }}">📊 Dashboard</a></li>
-            <li><a href="{{ url_for('admin.vessels') }}">🚢 Vessel Registry</a></li>
-            <li><a href="{{ url_for('admin.permits') }}">📄 Permits</a></li>
-            <li><a href="{{ url_for('admin.admin_inspections') }}">🔍 Inspections</a></li>
-            <li><a href="{{ url_for('admin.schedule_list') }}">📅 Schedule</a></li>
-            <li><a href="{{ url_for('admin.admin_violations') }}">⚠️ Violations</a></li>
-            <li><a href="{{ url_for('admin.admin_inspector_performance') }}">📈 Performance</a></li>
-            <li><a href="{{ url_for('admin.audit_log') }}">📋 Audit Log</a></li>
-        {% endif %}
-
-        {# ----------------------------- #}
-        {# INSPECTOR MENU               #}
-        {# ----------------------------- #}
-        {% if current_user.role == "inspector" %}
-            <li><a href="{{ url_for('inspector.inspector_dashboard') }}">📊 Dashboard</a></li>
-            <li><a href="{{ url_for('inspector.inspector_schedule') }}">📅 My Schedule</a></li>
-            <li><a href="{{ url_for('inspector.inspections_list') }}">🔍 My Inspections</a></li>
-            <li><a href="{{ url_for('inspector.create_inspection') }}">➕ New Inspection</a></li>
-        {% endif %}
-
-        {# ----------------------------- #}
-        {# FISHERMAN MENU               #}
-        {# ----------------------------- #}
-        {% if current_user.role == "fisherman" %}
-            <li><a href="{{ url_for('fisherman.fisherman_dashboard') }}">Dashboard</a></li>
-        {% endif %}
-
-        {# ----------------------------- #}
-        {# AMATEUR MENU                 #}
-        {# ----------------------------- #}
-        {% if current_user.role == "amateur" %}
-            <li><a href="{{ url_for('fisherman.amateur_dashboard') }}">Dashboard</a></li>
-        {% endif %}
-
-        {% if current_user.role == "administrator" %}
-            <li style="margin-top:8px;border-top:1px solid #334155;padding-top:8px;">
-                <a href="{{ url_for('admin.admin_users') }}">👥 User Management</a>
-            </li>
-        {% endif %}
-        <li style="margin-top:8px;border-top:1px solid #334155;padding-top:8px;">
-            <a href="{{ url_for('auth.profile') }}">👤 My Profile</a>
-        </li>
-        <li>
-            <a href="{{ url_for('auth.logout') }}" class="text-danger">🚪 Logout</a>
-        </li>
-    </ul>
-</div>
-
-
-    <!-- Main Content -->
-    <div class="content">
-        <div class="topbar">
-            <h4>{{ title if title else "Admin Panel" }}</h4>
+    <!-- Role Banner -->
+    <div class="sidebar-role-banner">
+      <div class="sidebar-role-avatar">
+        {{ current_user.first_name[0]|upper }}{{ current_user.last_name[0]|upper }}
+      </div>
+      <div>
+        <div class="sidebar-role-name">{{ current_user.first_name }} {{ current_user.last_name }}</div>
+        <div class="sidebar-role-label">
+          {% if current_user.role == "administrator" %}Administrator
+          {% elif current_user.role == "inspector" %}Inspector
+          {% elif current_user.role == "fisherman" %}Fisherman
+          {% else %}Amateur Fisher{% endif %}
         </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endwith %}
-
-        {% block content %}
-        {% endblock %}
+      </div>
     </div>
 
-    <!-- Bootstrap JS (required for modals, alerts) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+
+      <!-- ── ADMIN MENU ── -->
+      {% if current_user.role == "administrator" %}
+      <div class="sidebar-section-label">Management</div>
+
+      <a href="{{ url_for('admin.admin_dashboard') }}"
+        class="sidebar-link {% if request.endpoint == 'admin.admin_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="{{ url_for('admin.vessels') }}"
+        class="sidebar-link {% if 'vessel' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-water"></i> Vessel Registry
+      </a>
+      <a href="{{ url_for('admin.permits') }}"
+        class="sidebar-link {% if 'permit' in request.endpoint and request.endpoint != 'admin.add_permit' %}active{% elif request.endpoint in ['admin.permits','admin.permit_details','admin.add_permit','admin.edit_permit'] %}active{% endif %}">
+        <i class="bi bi-file-earmark-check"></i> Permits
+      </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">Operations</div>
+
+      <a href="{{ url_for('admin.admin_inspections') }}"
+        class="sidebar-link {% if 'inspection' in request.endpoint and 'schedule' not in request.endpoint %}active{% endif %}">
+        <i class="bi bi-clipboard2-check"></i> Inspections
+      </a>
+      <a href="{{ url_for('admin.schedule_list') }}"
+        class="sidebar-link {% if 'schedule' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-calendar3"></i> Schedule
+      </a>
+      <a href="{{ url_for('admin.admin_violations') }}"
+        class="sidebar-link {% if 'violation' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-exclamation-triangle"></i> Violations
+      </a>
+      <a href="{{ url_for('admin.admin_inspector_performance') }}"
+        class="sidebar-link {% if 'performance' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-bar-chart-line"></i> Performance
+      </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">System</div>
+
+      <a href="{{ url_for('admin.admin_users') }}"
+        class="sidebar-link {% if 'users' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-people"></i> User Management
+      </a>
+      <a href="{{ url_for('admin.audit_log') }}"
+        class="sidebar-link {% if 'audit' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> Audit Log
+      </a>
+      {% endif %}
+
+      <!-- ── INSPECTOR MENU ── -->
+      {% if current_user.role == "inspector" %}
+      <div class="sidebar-section-label">Inspector Portal</div>
+
+      <a href="{{ url_for('inspector.inspector_dashboard') }}"
+        class="sidebar-link {% if request.endpoint == 'inspector.inspector_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="{{ url_for('inspector.inspector_schedule') }}"
+        class="sidebar-link {% if 'schedule' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-calendar3"></i> My Schedule
+      </a>
+      <a href="{{ url_for('inspector.inspections_list') }}"
+        class="sidebar-link {% if request.endpoint == 'inspector.inspections_list' %}active{% endif %}">
+        <i class="bi bi-clipboard2-check"></i> My Inspections
+      </a>
+      <a href="{{ url_for('inspector.create_inspection') }}"
+        class="sidebar-link {% if request.endpoint == 'inspector.create_inspection' %}active{% endif %}">
+        <i class="bi bi-plus-circle"></i> New Inspection
+      </a>
+      {% endif %}
+
+      <!-- ── FISHERMAN MENU ── -->
+      {% if current_user.role == "fisherman" %}
+      <div class="sidebar-section-label">Fisherman Portal</div>
+
+      <a href="{{ url_for('fisherman.fisherman_dashboard') }}"
+        class="sidebar-link {% if request.endpoint == 'fisherman.fisherman_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      {% endif %}
+
+      <!-- ── AMATEUR MENU ── -->
+      {% if current_user.role == "amateur" %}
+      <div class="sidebar-section-label">Amateur Fisher Portal</div>
+
+      <a href="{{ url_for('fisherman.amateur_dashboard') }}"
+        class="sidebar-link {% if request.endpoint == 'fisherman.amateur_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      {% endif %}
+
+      <!-- ── SHARED BOTTOM LINKS ── -->
+      <div class="sidebar-divider" style="margin-top:auto;"></div>
+
+      <a href="{{ url_for('auth.profile') }}"
+        class="sidebar-link {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+        <i class="bi bi-person-circle"></i> My Profile
+      </a>
+      <a href="{{ url_for('auth.logout') }}" class="sidebar-link danger">
+        <i class="bi bi-box-arrow-left"></i> Sign Out
+      </a>
+
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      IARA v2.0 &nbsp;·&nbsp; Fisheries Authority
+    </div>
+  </aside>
+  {% endif %}
+
+
+  <!-- ═══════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════ -->
+  <div class="iara-main" {% if not current_user.is_authenticated %}style="margin-left:0;" {% endif %}>
+
+    <!-- Topbar -->
+    <header class="iara-topbar">
+      <div class="topbar-breadcrumb">
+        <i class="bi bi-house" style="color:var(--text-secondary);font-size:14px;"></i>
+        <span class="bc-sep">/</span>
+        <span class="bc-current">{{ title if title else "Dashboard" }}</span>
+      </div>
+      <div class="topbar-actions">
+        {% if current_user.is_authenticated %}
+        {% if current_user.role == "administrator" %}
+        <span class="topbar-badge">
+          <i class="bi bi-shield-check"></i> Administrator
+        </span>
+        {% elif current_user.role == "inspector" %}
+        <span class="topbar-badge" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;">
+          <i class="bi bi-clipboard2-check"></i> Inspector
+        </span>
+        {% elif current_user.role == "fisherman" %}
+        <span class="topbar-badge" style="background:#f0fdf4;border-color:#bbf7d0;color:#15803d;">
+          <i class="bi bi-water"></i> Fisherman
+        </span>
+        {% else %}
+        <span class="topbar-badge" style="background:#fffbeb;border-color:#fde68a;color:#b45309;">
+          <i class="bi bi-person"></i> Amateur
+        </span>
+        {% endif %}
+        {% endif %}
+
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="iara-content">
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+      <div class="iara-alert {{ category }} d-flex justify-content-between align-items-start">
+        <div class="d-flex gap-2 align-items-start">
+          {% if category == 'success' %}<i class="bi bi-check-circle-fill mt-1"></i>
+          {% elif category == 'danger' or category == 'error' %}<i class="bi bi-x-circle-fill mt-1"></i>
+          {% elif category == 'warning' %}<i class="bi bi-exclamation-triangle-fill mt-1"></i>
+          {% else %}<i class="bi bi-info-circle-fill mt-1"></i>{% endif %}
+          <span>{{ message }}</span>
+        </div>
+        <button type="button" onclick="this.parentElement.style.display='none'"
+          style="background:none;border:none;cursor:pointer;opacity:.5;font-size:16px;line-height:1;padding:0 0 0 8px;">&times;</button>
+      </div>
+      {% endfor %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  {% block extra_scripts %}{% endblock %}
+
 </body>
+
 </html>

@@ -1,142 +1,215 @@
 {% extends "layout/base.html" %}
 {% block content %}
 
-<h2 class="mb-4">Administrator Dashboard</h2>
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Administrator Dashboard</h1>
+    <p class="page-subtitle">System overview — Fisheries Inspection & Regulation Authority</p>
+  </div>
+  <div style="font-size:12px;color:var(--text-secondary);">
+    <i class="bi bi-clock"></i>
+    Last updated: <span id="lastUpdated"></span>
+  </div>
+</div>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
-  <div class="col-md-2">
-    <div class="card shadow-sm p-3 text-center border-0" style="background:#e0f2fe;">
-      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#0369a1;">Total Permits</div>
-      <div class="fw-bold" style="font-size:2rem;color:#0369a1;">{{ total_permits }}</div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card blue">
+      <div class="kpi-icon blue"><i class="bi bi-file-earmark-check-fill"></i></div>
+      <div class="kpi-value">{{ total_permits }}</div>
+      <div class="kpi-label">Total Permits</div>
     </div>
   </div>
-  <div class="col-md-2">
-    <div class="card shadow-sm p-3 text-center border-0" style="background:#dcfce7;">
-      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#15803d;">Active</div>
-      <div class="fw-bold" style="font-size:2rem;color:#15803d;">{{ active_permits }}</div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card green">
+      <div class="kpi-icon green"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="kpi-value">{{ active_permits }}</div>
+      <div class="kpi-label">Active</div>
     </div>
   </div>
-  <div class="col-md-2">
-    <div class="card shadow-sm p-3 text-center border-0" style="background:#fee2e2;">
-      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;">Expired</div>
-      <div class="fw-bold" style="font-size:2rem;color:#dc2626;">{{ expired_permits }}</div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card red">
+      <div class="kpi-icon red"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="kpi-value">{{ expired_permits }}</div>
+      <div class="kpi-label">Expired</div>
     </div>
   </div>
-  <div class="col-md-2">
-    <div class="card shadow-sm p-3 text-center border-0" style="background:#fef9c3;">
-      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#b45309;">Suspended</div>
-      <div class="fw-bold" style="font-size:2rem;color:#b45309;">{{ suspended_permits }}</div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card amber">
+      <div class="kpi-icon amber"><i class="bi bi-pause-circle-fill"></i></div>
+      <div class="kpi-value">{{ suspended_permits }}</div>
+      <div class="kpi-label">Suspended</div>
     </div>
   </div>
-  <div class="col-md-2">
-    <div class="card shadow-sm p-3 text-center border-0" style="background:#fce7f3;">
-      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#be185d;">Expiring Soon</div>
-      <div class="fw-bold" style="font-size:2rem;color:#be185d;">{{ expiring_soon }}</div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card purple">
+      <div class="kpi-icon purple"><i class="bi bi-clock-history"></i></div>
+      <div class="kpi-value">{{ expiring_soon }}</div>
+      <div class="kpi-label">Expiring (30d)</div>
     </div>
   </div>
-  <div class="col-md-2">
-    <div class="card shadow-sm p-3 text-center border-0" style="background:#f0fdf4;">
-      <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#166534;">Vessels</div>
-      <div class="fw-bold" style="font-size:2rem;color:#166534;">{{ total_vessels }}</div>
+  <div class="col-6 col-md-2">
+    <div class="kpi-card teal">
+      <div class="kpi-icon teal"><i class="bi bi-water"></i></div>
+      <div class="kpi-value">{{ total_vessels }}</div>
+      <div class="kpi-label">Vessels</div>
     </div>
   </div>
 </div>
 
 <!-- Charts Row -->
 <div class="row g-3 mb-4">
-  <div class="col-md-5">
-    <div class="card shadow-sm p-3">
-      <h6 class="text-muted mb-3">Inspections per Month</h6>
-      <canvas id="monthlyChart" height="180"></canvas>
+  <div class="col-lg-5">
+    <div class="chart-card h-100">
+      <div class="chart-title"><i class="bi bi-bar-chart-line-fill"></i> Inspections per Month</div>
+      <canvas id="monthlyChart" height="200"></canvas>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm p-3">
-      <h6 class="text-muted mb-3">Violations by Severity</h6>
-      <canvas id="severityChart" height="180"></canvas>
+  <div class="col-lg-3">
+    <div class="chart-card h-100">
+      <div class="chart-title"><i class="bi bi-pie-chart-fill"></i> Violations by Severity</div>
+      <canvas id="severityChart" height="200"></canvas>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card shadow-sm p-3">
-      <h6 class="text-muted mb-3">Score Trend (last 10)</h6>
-      <canvas id="scoreChart" height="180"></canvas>
+  <div class="col-lg-4">
+    <div class="chart-card h-100">
+      <div class="chart-title"><i class="bi bi-graph-up-arrow"></i> Inspection Score Trend</div>
+      <canvas id="scoreChart" height="200"></canvas>
     </div>
   </div>
 </div>
 
-<!-- Quick Links -->
+<!-- Quick Nav Tiles -->
 <div class="row g-3">
-  <div class="col-md-3">
-    <a href="{{ url_for('admin.admin_inspections') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
-      <div style="font-size:1.5rem;">🔍</div>
-      <div><strong>Inspections</strong><br><small class="text-muted">View &amp; manage all</small></div>
+  <div class="col-sm-6 col-lg-3">
+    <a href="{{ url_for('admin.admin_inspections') }}" class="quick-tile">
+      <div class="quick-tile-icon" style="background:#eff6ff;">
+        <i class="bi bi-clipboard2-check-fill" style="color:#1d4ed8;"></i>
+      </div>
+      <div class="quick-tile-text">
+        <strong>Inspections</strong>
+        <small>View & manage all</small>
+      </div>
     </a>
   </div>
-  <div class="col-md-3">
-    <a href="{{ url_for('admin.schedule_list') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
-      <div style="font-size:1.5rem;">📅</div>
-      <div><strong>Schedule</strong><br><small class="text-muted">Assign inspectors</small></div>
+  <div class="col-sm-6 col-lg-3">
+    <a href="{{ url_for('admin.schedule_list') }}" class="quick-tile">
+      <div class="quick-tile-icon" style="background:#f0fdf4;">
+        <i class="bi bi-calendar3-fill" style="color:#15803d;"></i>
+      </div>
+      <div class="quick-tile-text">
+        <strong>Schedule</strong>
+        <small>Assign inspectors</small>
+      </div>
     </a>
   </div>
-  <div class="col-md-3">
-    <a href="{{ url_for('admin.admin_violations') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
-      <div style="font-size:1.5rem;">⚠️</div>
-      <div><strong>Violations</strong><br><small class="text-muted">Review &amp; approve</small></div>
+  <div class="col-sm-6 col-lg-3">
+    <a href="{{ url_for('admin.admin_violations') }}" class="quick-tile">
+      <div class="quick-tile-icon" style="background:#fff7ed;">
+        <i class="bi bi-exclamation-triangle-fill" style="color:#c2410c;"></i>
+      </div>
+      <div class="quick-tile-text">
+        <strong>Violations</strong>
+        <small>Review & approve</small>
+      </div>
     </a>
   </div>
-  <div class="col-md-3">
-    <a href="{{ url_for('admin.audit_log') }}" class="card shadow-sm p-3 text-decoration-none d-flex align-items-center gap-3">
-      <div style="font-size:1.5rem;">📋</div>
-      <div><strong>Audit Log</strong><br><small class="text-muted">System activity</small></div>
+  <div class="col-sm-6 col-lg-3">
+    <a href="{{ url_for('admin.admin_users') }}" class="quick-tile">
+      <div class="quick-tile-icon" style="background:#faf5ff;">
+        <i class="bi bi-people-fill" style="color:#7c3aed;"></i>
+      </div>
+      <div class="quick-tile-text">
+        <strong>User Management</strong>
+        <small>Accounts & roles</small>
+      </div>
     </a>
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-GB');
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-fetch("{{ url_for('admin.admin_dashboard_data') }}")
-  .then(r => r.json())
-  .then(data => {
+  fetch("{{ url_for('admin.admin_dashboard_data') }}")
+    .then(r => r.json())
+    .then(data => {
 
-    // Monthly inspections bar chart
-    new Chart(document.getElementById("monthlyChart"), {
-      type: "bar",
-      data: {
-        labels: data.monthly_inspections.map(d => d.label),
-        datasets: [{ label: "Inspections", data: data.monthly_inspections.map(d => d.count),
-          backgroundColor: "#3b82f6", borderRadius: 4 }]
-      },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-    });
+      new Chart(document.getElementById("monthlyChart"), {
+        type: "bar",
+        data: {
+          labels: data.monthly_inspections.map(d => d.label),
+          datasets: [{
+            label: "Inspections",
+            data: data.monthly_inspections.map(d => d.count),
+            backgroundColor: "rgba(26,115,232,.75)",
+            borderRadius: 5,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true, ticks: { stepSize: 1 },
+              grid: { color: "rgba(0,0,0,.05)" }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
 
-    // Severity doughnut
-    const sevColors = { Critical: "#dc2626", High: "#ea580c", Medium: "#d97706", Low: "#94a3b8" };
-    new Chart(document.getElementById("severityChart"), {
-      type: "doughnut",
-      data: {
-        labels: data.violations_by_severity.map(d => d.severity),
-        datasets: [{ data: data.violations_by_severity.map(d => d.count),
-          backgroundColor: data.violations_by_severity.map(d => sevColors[d.severity] || "#ccc") }]
-      },
-      options: { plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, cutout: "65%" }
-    });
+      const sevColors = {
+        Critical: "#dc2626", High: "#ea580c", Medium: "#d97706", Low: "#94a3b8"
+      };
+      new Chart(document.getElementById("severityChart"), {
+        type: "doughnut",
+        data: {
+          labels: data.violations_by_severity.map(d => d.severity),
+          datasets: [{
+            data: data.violations_by_severity.map(d => d.count),
+            backgroundColor: data.violations_by_severity.map(d => sevColors[d.severity] || "#ccc"),
+            borderWidth: 2, borderColor: "#fff"
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: "bottom", labels: { font: { size: 11 } } }
+          },
+          cutout: "65%"
+        }
+      });
 
-    // Score trend line
-    new Chart(document.getElementById("scoreChart"), {
-      type: "line",
-      data: {
-        labels: data.score_trend.map(d => d.date),
-        datasets: [{ label: "Score", data: data.score_trend.map(d => d.score),
-          borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,.1)",
-          tension: 0.3, fill: true, pointRadius: 4 }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: { y: { min: 0, max: 100, ticks: { stepSize: 20 } } }
-      }
-    });
+      new Chart(document.getElementById("scoreChart"), {
+        type: "line",
+        data: {
+          labels: data.score_trend.map(d => d.date),
+          datasets: [{
+            label: "Score",
+            data: data.score_trend.map(d => d.score),
+            borderColor: "#059669",
+            backgroundColor: "rgba(5,150,105,.08)",
+            tension: 0.4, fill: true, pointRadius: 4,
+            pointBackgroundColor: "#059669"
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              min: 0, max: 100, ticks: { stepSize: 20 },
+              grid: { color: "rgba(0,0,0,.05)" }
+            },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
 
-  }).catch(e => console.error("Dashboard data error:", e));
+    }).catch(e => console.error("Dashboard data error:", e));
 </script>
 {% endblock %}

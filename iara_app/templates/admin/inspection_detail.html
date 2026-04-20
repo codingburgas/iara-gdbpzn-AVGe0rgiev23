@@ -1,84 +1,154 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Inspection #{{ inspection.id }} — Admin View</h2>
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="page-header-left">
+        <h1 class="page-title">Inspection #{{ inspection.id }}</h1>
+        <p class="page-subtitle">Review submitted inspection details and approve/reject actions</p>
+    </div>
     <div class="d-flex gap-2">
-    <a href="{{ url_for('admin.admin_inspections') }}" class="btn btn-secondary">← Back</a>
-    <a href="{{ url_for('inspector.export_inspection_pdf', inspection_id=inspection.id) }}"
-       class="btn btn-outline-dark" target="_blank">📄 PDF Report</a>
-    <a href="{{ url_for('admin.vessel_qr_print', vessel_id=inspection.vessel.id) }}"
-       class="btn btn-outline-primary" target="_blank">QR Code</a>
-  </div>
+        <a href="{{ url_for('admin.admin_inspections') }}" class="btn-iara-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <a href="{{ url_for('inspector.export_inspection_pdf', inspection_id=inspection.id) }}"
+            class="btn-iara-secondary" target="_blank" style="color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff;">
+            <i class="bi bi-file-earmark-pdf-fill"></i> PDF Report
+        </a>
+        <a href="{{ url_for('admin.vessel_qr_print', vessel_id=inspection.vessel.id) }}" class="btn-iara-secondary"
+            target="_blank" style="color:#15803d;border-color:#bbf7d0;background:#f0fdf4;">
+            <i class="bi bi-qr-code"></i> Vessel QR
+        </a>
+    </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white">Inspection Details</div>
-            <div class="card-body">
-                <p><strong>Vessel:</strong> {{ inspection.vessel.call_sign }} ({{ inspection.vessel.international_number }})</p>
-                <p><strong>Owner:</strong> {{ inspection.vessel.owner_name }}</p>
-                <p><strong>Captain:</strong> {{ inspection.vessel.captain_name }}</p>
-                <p><strong>Date:</strong> {{ inspection.date }}</p>
-                <p><strong>Location:</strong> {{ inspection.location }}</p>
-                <p><strong>Permit Status at Inspection:</strong>
-                    {% if inspection.permit_status_snapshot == "Active" %}
-                        <span class="badge bg-success">Active</span>
-                    {% elif inspection.permit_status_snapshot == "Expired" %}
-                        <span class="badge bg-danger">Expired</span>
-                    {% elif inspection.permit_status_snapshot == "No Permit" %}
-                        <span class="badge bg-dark">No Permit</span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark">{{ inspection.permit_status_snapshot }}</span>
-                    {% endif %}
-                </p>
+<div class="row g-3 mb-4">
+    <!-- Details Card -->
+    <div class="col-lg-6">
+        <div class="iara-card h-100">
+            <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+                <h2 class="iara-card-title text-white"><i class="bi bi-info-circle"></i> Vessel & Location Details</h2>
+            </div>
+            <div class="iara-card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-5 text-muted fw-semibold" style="font-size:13px;">Vessel</div>
+                    <div class="col-sm-7 fw-bold">
+                        {{ inspection.vessel.call_sign }}
+                        <span class="text-muted fw-normal font-monospace" style="font-size:12px;">({{
+                            inspection.vessel.international_number }})</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-5 text-muted fw-semibold" style="font-size:13px;">Owner & Captain</div>
+                    <div class="col-sm-7" style="font-size:13px;">
+                        <div>O: {{ inspection.vessel.owner_name }}</div>
+                        <div>C: {{ inspection.vessel.captain_name }}</div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-5 text-muted fw-semibold" style="font-size:13px;">Date & Location</div>
+                    <div class="col-sm-7" style="font-size:13px;">
+                        <div><i class="bi bi-calendar3 text-muted me-1"></i> {{ inspection.date }}</div>
+                        <div><i class="bi bi-geo-alt-fill text-muted me-1"></i> {{ inspection.location }}</div>
+                    </div>
+                </div>
+                <div class="row mb-3 align-items-center">
+                    <div class="col-sm-5 text-muted fw-semibold" style="font-size:13px;">Permit Status</div>
+                    <div class="col-sm-7">
+                        {% if inspection.permit_status_snapshot == "Active" %}
+                        <span class="iara-badge badge-status-active">Active</span>
+                        {% elif inspection.permit_status_snapshot == "Expired" %}
+                        <span class="iara-badge badge-status-expired">Expired</span>
+                        {% elif inspection.permit_status_snapshot == "No Permit" %}
+                        <span class="iara-badge bg-secondary text-white">No Permit</span>
+                        {% else %}
+                        <span class="iara-badge badge-sev-medium">{{ inspection.permit_status_snapshot }}</span>
+                        {% endif %}
+                    </div>
+                </div>
                 {% if inspection.notes %}
-                <p><strong>Notes:</strong> {{ inspection.notes }}</p>
+                <div class="p-3"
+                    style="background:#f8fafc;border-radius:8px;border:1px solid var(--border-color);font-size:13px;">
+                    <strong class="text-dark d-block mb-1">Inspector Notes:</strong>
+                    <span class="text-secondary">{{ inspection.notes }}</span>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white">Status & Scoring</div>
-            <div class="card-body">
-                <p><strong>Status:</strong>
-                    {% if inspection.status == "draft" %}
-                        <span class="badge bg-secondary">Draft</span>
-                    {% elif inspection.status == "submitted" %}
-                        <span class="badge bg-primary">Submitted</span>
-                    {% elif inspection.status == "approved" %}
-                        <span class="badge bg-success">Approved</span>
-                    {% elif inspection.status == "rejected" %}
-                        <span class="badge bg-danger">Rejected</span>
+    <!-- Status Card -->
+    <div class="col-lg-6">
+        <div class="iara-card h-100">
+            <div class="iara-card-header bg-dark text-white" style="border-radius:12px 12px 0 0;">
+                <h2 class="iara-card-title text-white"><i class="bi bi-shield-check"></i> Status & Scoring</h2>
+            </div>
+            <div class="iara-card-body">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        <div class="text-muted fw-semibold" style="font-size:13px;margin-bottom:4px;">Workflow Status
+                        </div>
+                        {% if inspection.status == "draft" %}<span
+                            class="iara-badge bg-secondary text-white">Draft</span>
+                        {% elif inspection.status == "submitted" %}<span class="iara-badge badge-inspector"
+                            style="background:#1d4ed8;color:#fff;">Submitted</span>
+                        {% elif inspection.status == "approved" %}<span
+                            class="iara-badge badge-status-active">Approved</span>
+                        {% elif inspection.status == "rejected" %}<span
+                            class="iara-badge badge-status-expired">Rejected</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted fw-semibold" style="font-size:13px;margin-bottom:4px;">Calculated Score
+                        </div>
+                        <div
+                            style="font-size:28px;font-weight:800;line-height:1;color:{% if inspection.score >= 80 %}var(--iara-success){% elif inspection.score >= 60 %}var(--iara-warning){% else %}var(--iara-danger){% endif %};">
+                            {{ inspection.final_score if inspection.final_score is not none else inspection.score
+                            }}<span class="text-muted" style="font-size:14px;">/100</span>
+                        </div>
+                        {% if inspection.final_score is not none and inspection.final_score != inspection.score %}
+                        <div style="font-size:11px;color:var(--iara-warning);"><i class="bi bi-info-circle"></i>
+                            Overridden from {{ inspection.score }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr style="border-color:var(--border-color);margin:16px 0;">
+
+                <div style="font-size:13px;">
+                    <div class="row mb-2">
+                        <div class="col-sm-5 text-muted fw-semibold">Inspector</div>
+                        <div class="col-sm-7 fw-bold">{{ inspection.inspector.first_name }} {{
+                            inspection.inspector.last_name }} <span class="text-muted fw-normal"
+                                style="font-size:11px;">({{ inspection.inspector.email }})</span></div>
+                    </div>
+                    {% if inspection.submitted_at %}
+                    <div class="row mb-2">
+                        <div class="col-sm-5 text-muted fw-semibold">Submitted At</div>
+                        <div class="col-sm-7"><i class="bi bi-clock me-1"></i> {{
+                            inspection.submitted_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
                     {% endif %}
-                </p>
-                <p><strong>Inspector:</strong>
-                    {{ inspection.inspector.first_name }} {{ inspection.inspector.last_name }}
-                    <small class="text-muted">({{ inspection.inspector.email }})</small>
-                </p>
-                <p><strong>Running Score:</strong> {{ inspection.score }}</p>
-                <p><strong>Final Score:</strong>
-                    {% if inspection.final_score is not none %}
-                        <strong class="text-success fs-5">{{ inspection.final_score }}</strong> / 100
-                    {% else %}
-                        <span class="text-muted">Not yet finalized</span>
+                    {% if inspection.inspector_signature %}
+                    <div class="row mb-2">
+                        <div class="col-sm-5 text-muted fw-semibold">Signed By</div>
+                        <div class="col-sm-7 font-monospace">{{ inspection.inspector_signature }}</div>
+                    </div>
                     {% endif %}
-                </p>
-                {% if inspection.submitted_at %}
-                <p><strong>Submitted At:</strong> {{ inspection.submitted_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% endif %}
-                {% if inspection.inspector_signature %}
-                <p><strong>Signed By:</strong> {{ inspection.inspector_signature }}</p>
-                {% endif %}
-                {% if inspection.approved_at %}
-                <p><strong>Approved At:</strong> {{ inspection.approved_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% endif %}
-                {% if inspection.rejected_at %}
-                <p><strong>Rejected At:</strong> {{ inspection.rejected_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% endif %}
+                    {% if inspection.approved_at %}
+                    <div class="row mb-2">
+                        <div class="col-sm-5 text-muted fw-semibold text-success">Approved At</div>
+                        <div class="col-sm-7 text-success"><i class="bi bi-check-circle me-1"></i> {{
+                            inspection.approved_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
+                    {% endif %}
+                    {% if inspection.rejected_at %}
+                    <div class="row mb-2">
+                        <div class="col-sm-5 text-muted fw-semibold text-danger">Rejected At</div>
+                        <div class="col-sm-7 text-danger"><i class="bi bi-x-circle me-1"></i> {{
+                            inspection.rejected_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -86,112 +156,126 @@
 
 <!-- Admin Actions -->
 {% if inspection.status == "submitted" %}
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-dark">Admin Actions</div>
-    <div class="card-body d-flex gap-3 align-items-start flex-wrap">
+<div class="iara-card mb-4" style="border-color:#fde68a;">
+    <div class="iara-card-header" style="background:#fffbeb;border-bottom-color:#fde68a;">
+        <h2 class="iara-card-title text-warning-emphasis"><i class="bi bi-exclamation-circle-fill"></i> Admin Final
+            Review</h2>
+    </div>
+    <div class="iara-card-body d-flex flex-wrap gap-4 align-items-center">
 
-        <form method="POST"
-              action="{{ url_for('admin.admin_override_score', inspection_id=inspection.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label class="form-label fw-bold">Override Score & Approve</label>
-            <div class="input-group">
-                <input type="number" name="new_score" min="0" max="100"
-                       class="form-control" style="width:100px;"
-                       value="{{ inspection.final_score or inspection.score }}">
-                <button class="btn btn-success">✔ Approve</button>
-            </div>
-        </form>
+        <div style="flex:1;">
+            <form method="POST" action="{{ url_for('admin.admin_override_score', inspection_id=inspection.id) }}"
+                class="d-flex align-items-end gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label class="form-label fw-bold" style="font-size:12px;">Override Score &amp; Approve</label>
+                    <input type="number" name="new_score" min="0" max="100" class="form-control"
+                        style="width:100px;text-align:center;font-weight:700;"
+                        value="{{ inspection.final_score or inspection.score }}">
+                </div>
+                <button class="btn-iara-primary" style="height:38px;"><i class="bi bi-check-circle"></i>
+                    Approve</button>
+            </form>
+        </div>
 
-        <form method="POST"
-              action="{{ url_for('admin.admin_reject_inspection', inspection_id=inspection.id) }}"
-              onsubmit="return confirm('Reject this inspection?');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label class="form-label fw-bold">Reject Inspection</label><br>
-            <button class="btn btn-danger">✘ Reject</button>
-        </form>
+        <div style="border-left:1px solid #fcd34d;padding-left:24px;">
+            <form method="POST" action="{{ url_for('admin.admin_reject_inspection', inspection_id=inspection.id) }}"
+                onsubmit="return confirm('WARNING: This will reject the entire inspection report. Are you sure?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="form-label fw-bold text-danger" style="font-size:12px;">Reject Report</label><br>
+                <button class="btn-iara-danger" style="height:38px;"><i class="bi bi-x-circle"></i> Reject
+                    Inspection</button>
+            </form>
+        </div>
 
     </div>
 </div>
 {% endif %}
 
-<!-- Violations -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-danger text-white">
-        Violations ({{ inspection.violations | length }})
+<!-- Violations Box -->
+<div class="iara-card">
+    <div class="iara-card-header" style="background:#fef2f2;border-bottom-color:#fca5a5;">
+        <h2 class="iara-card-title text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Logged Violations</h2>
+        <span class="iara-badge badge-sev-critical">{{ inspection.violations|length }}</span>
     </div>
-    <div class="card-body">
-        {% if inspection.violations %}
-        <table class="table table-bordered table-sm mb-0">
-            <thead class="table-light">
+    <div class="iara-table-wrapper">
+        <table class="iara-table">
+            <thead>
                 <tr>
-                    <th>#</th>
                     <th>Code</th>
                     <th>Severity</th>
                     <th>Description</th>
                     <th>Status</th>
                     <th>Evidence</th>
-                    <th>Admin Actions</th>
+                    <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
             <tbody>
+                {% if inspection.violations %}
                 {% for v in inspection.violations %}
                 <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ v.violation_code.code if v.violation_code else "—" }}</td>
+                    <td style="font-family:monospace;font-size:13px;font-weight:600;">{{ v.violation_code.code if
+                        v.violation_code else "—" }}</td>
                     <td>
-                        {% if v.severity == "Critical" %}
-                            <span class="badge bg-danger">Critical</span>
-                        {% elif v.severity == "High" %}
-                            <span class="badge" style="background:#fd7e14">High</span>
-                        {% elif v.severity == "Medium" %}
-                            <span class="badge bg-warning text-dark">Medium</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Low</span>
-                        {% endif %}
+                        {% if v.severity == "Critical" %}<span class="iara-badge badge-sev-critical">Critical</span>
+                        {% elif v.severity == "High" %}<span class="iara-badge badge-sev-high">High</span>
+                        {% elif v.severity == "Medium" %}<span class="iara-badge badge-sev-medium">Medium</span>
+                        {% else %}<span class="iara-badge badge-sev-low">Low</span>{% endif %}
                     </td>
-                    <td>{{ v.description or "—" }}</td>
+                    <td style="font-size:13px;max-width:250px;">{{ v.description or "—" }}</td>
                     <td>
-                        {% if v.status == "open" %}<span class="badge bg-danger">Open</span>
-                        {% elif v.status == "corrected" %}<span class="badge bg-warning text-dark">Corrected</span>
-                        {% elif v.status == "approved" %}<span class="badge bg-success">Approved</span>
-                        {% elif v.status == "rejected" %}<span class="badge bg-secondary">Rejected</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center">
-                        {{ v.evidence | length }}
-                        {% if v.evidence %}
-                        <br>
-                        <a href="{{ url_for('admin.admin_view_evidence', violation_id=v.id) }}"
-                           class="btn btn-xs btn-outline-info btn-sm mt-1">View</a>
+                        {% if v.status == "open" %}<span class="iara-badge badge-sev-critical">Open</span>
+                        {% elif v.status == "corrected" %}<span class="iara-badge badge-sev-medium">Corrected</span>
+                        {% elif v.status == "approved" %}<span class="iara-badge badge-status-active">Approved</span>
+                        {% elif v.status == "rejected" %}<span class="iara-badge badge-status-expired">Rejected</span>
                         {% endif %}
                     </td>
                     <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="font-size:13px;font-weight:600;">{{ v.evidence|length }}</span>
+                            {% if v.evidence %}
+                            <a href="{{ url_for('admin.admin_view_evidence', violation_id=v.id) }}"
+                                class="btn-iara-secondary" style="padding:2px 8px;font-size:11px;"><i
+                                    class="bi bi-images"></i> View</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td style="text-align:right;">
                         {% if v.status == "corrected" %}
-                        <form method="POST"
-                              action="{{ url_for('admin.admin_approve_violation', violation_id=v.id) }}"
-                              style="display:inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button class="btn btn-sm btn-success">Approve</button>
-                        </form>
-                        <form method="POST"
-                              action="{{ url_for('admin.admin_reject_violation', violation_id=v.id) }}"
-                              style="display:inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button class="btn btn-sm btn-danger">Reject</button>
-                        </form>
+                        <div class="d-flex justify-content-end gap-1">
+                            <form method="POST"
+                                action="{{ url_for('admin.admin_approve_violation', violation_id=v.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn-iara-primary" style="padding:4px 10px;font-size:12px;"><i
+                                        class="bi bi-check2"></i> Appr</button>
+                            </form>
+                            <form method="POST"
+                                action="{{ url_for('admin.admin_reject_violation', violation_id=v.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn-iara-danger" style="padding:4px 10px;font-size:12px;"><i
+                                        class="bi bi-x"></i> Rej</button>
+                            </form>
+                        </div>
                         {% else %}
-                        <span class="text-muted">—</span>
+                        <span class="text-muted" style="font-size:12px;">—</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i class="bi bi-shield-check text-success"></i>
+                            <h6 class="text-success mt-2">Zero Violations</h6>
+                            <p style="font-size:12px;margin:0;">No infractions were recorded during this inspection.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
-        {% else %}
-        <p class="text-muted mb-0">No violations recorded.</p>
-        {% endif %}
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

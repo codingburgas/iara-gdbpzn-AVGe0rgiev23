@@ -1,0 +1,203 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Create User Account</h1>
+        <p class="page-subtitle">Add a new user to the IARA system with a specific role and permissions</p>
+    </div>
+    <a href="{{ url_for('admin.admin_users') }}" class="btn-iara-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Users
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="iara-card">
+            <div class="iara-card-header">
+                <h2 class="iara-card-title"><i class="bi bi-person-plus"></i> New User Details</h2>
+            </div>
+            <div class="iara-card-body">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <!-- First Name -->
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.first_name.label() }}
+                                {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else
+                                ""),
+                                placeholder="e.g. Ivan") }}
+                                {% for e in form.first_name.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <!-- Last Name -->
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.last_name.label() }}
+                                {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else
+                                ""),
+                                placeholder="e.g. Petrov") }}
+                                {% for e in form.last_name.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.email.label() }}
+                                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+                                placeholder="user@iara.gov.bg") }}
+                                {% for e in form.email.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <!-- Phone -->
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.phone.label() }}
+                                {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""),
+                                placeholder="+359 888 000 000") }}
+                                {% for e in form.phone.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="iara-form-group">
+                            {{ form.role.label() }}
+                            {{ form.role(class="form-select" + (" is-invalid" if form.role.errors else ""),
+                            id="roleSelect", onchange="updateRoleInfo()") }}
+                            {% for e in form.role.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Role Info Box -->
+                        <div id="roleInfoBox" class="p-3 mb-3"
+                            style="background:#f0f6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;color:#1d4ed8;">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <span id="roleInfoText">Select a role to see access level details.</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Password -->
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.password.label() }}
+                                {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""),
+                                placeholder="Min. 8 characters", id="newPassword") }}
+                                {% for e in form.password.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <!-- Confirm Password -->
+                        <div class="col-md-6">
+                            <div class="iara-form-group mb-0">
+                                {{ form.confirm_password.label() }}
+                                {{ form.confirm_password(class="form-control" + (" is-invalid" if
+                                form.confirm_password.errors else ""),
+                                placeholder="Repeat password") }}
+                                {% for e in form.confirm_password.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Checkbox -->
+                    <div class="mt-4 p-3"
+                        style="background:#f8fafc;border:1px solid var(--border-color);border-radius:8px;">
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input", id="activeCheck") }}
+                            <label class="form-check-label fw-semibold" for="activeCheck" style="font-size:14px;">
+                                {{ form.is_active.label.text }}
+                            </label>
+                            <div class="text-muted" style="font-size:12px;margin-top:2px;">
+                                Inactive accounts cannot log in until activated by an administrator.
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border-color:var(--border-color);margin:24px 0;">
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-iara-primary">
+                            <i class="bi bi-person-plus-fill"></i> Create User Account
+                        </button>
+                        <a href="{{ url_for('admin.admin_users') }}" class="btn-iara-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Info Panel -->
+    <div class="col-lg-5">
+        <div class="iara-card">
+            <div class="iara-card-header">
+                <h2 class="iara-card-title"><i class="bi bi-info-circle"></i> Role Permissions Guide</h2>
+            </div>
+            <div class="iara-card-body" style="padding:0;">
+                {% set roles = [
+                ('bi-shield-fill', '#7c3aed', 'Administrator', 'Full system access. Can manage all users, vessels,
+                permits, inspections, and view audit logs.'),
+                ('bi-clipboard2-check-fill', '#0d9488', 'Inspector', 'Can create and submit inspections, record
+                violations, and view vessels and permits.'),
+                ('bi-water', '#059669', 'Fisherman', 'Can view their own permits, violations, and vessel information.'),
+                ('bi-person-fill', '#d97706', 'Amateur Fisher', 'Limited access — can view basic permit information
+                only.'),
+                ] %}
+                {% for icon, color, label, desc in roles %}
+                <div style="padding:16px 20px;border-bottom:1px solid var(--border-color);">
+                    <div style="display:flex;align-items:flex-start;gap:12px;">
+                        <div
+                            style="width:36px;height:36px;border-radius:8px;background:{{ color }}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi {{ icon }}" style="color:{{ color }};font-size:16px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:13.5px;margin-bottom:3px;">{{ label }}</div>
+                            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">{{ desc }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const roleInfo = {
+        administrator: "Full system access — can manage all users, vessels, permits, inspections, violations, and audit logs.",
+        inspector: "Can conduct inspections, record violations, upload evidence, and view scheduled inspections.",
+        fisherman: "Can view own permit status, vessel details, and any violations recorded against them.",
+        amateur: "Basic access — can view own fishing permit information and personal profile only.",
+    };
+
+    function updateRoleInfo() {
+        const sel = document.getElementById('roleSelect');
+        const box = document.getElementById('roleInfoBox');
+        const txt = document.getElementById('roleInfoText');
+        const info = roleInfo[sel.value];
+        txt.textContent = info || "Select a role to see access level details.";
+    }
+
+    document.addEventListener('DOMContentLoaded', updateRoleInfo);
+</script>
+{% endblock %}

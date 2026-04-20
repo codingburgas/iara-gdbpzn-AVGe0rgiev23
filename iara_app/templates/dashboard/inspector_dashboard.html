@@ -1,161 +1,218 @@
 {% extends "layout/base.html" %}
-
 {% block content %}
-<h2 class="mb-4">Inspector Dashboard</h2>
 
-<div class="row">
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Inspector Dashboard</h1>
+        <p class="page-subtitle">Your daily tasks, upcoming inspections, and unresolved incidents</p>
+    </div>
+</div>
 
+<div class="row g-3 mb-4">
     <!-- Today's Inspections -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                Today's Inspections ({{ todays_inspections | length }})
+    <div class="col-md-6">
+        <div class="iara-card h-100">
+            <div class="iara-card-header" style="background:#f0f6ff;border-bottom-color:#bfdbfe;">
+                <h2 class="iara-card-title" style="color:#1d4ed8;">
+                    <i class="bi bi-calendar-event"></i> Today's Inspections
+                </h2>
+                <span class="iara-badge" style="background:#1d4ed8;color:#fff;">{{ todays_inspections|length }}</span>
             </div>
-            <div class="card-body">
+            <div class="iara-card-body" style="padding:0;">
                 {% if todays_inspections %}
-                    <ul class="list-group list-group-flush">
-                        {% for insp in todays_inspections %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>{{ insp.vessel.call_sign }} — {{ insp.location }}</span>
-                            <a href="{{ url_for('inspector.inspection_details', inspection_id=insp.id) }}"
-                               class="btn btn-sm btn-outline-primary">Open</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                {% for insp in todays_inspections %}
+                <div
+                    style="padding:14px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-weight:600;font-size:14px;">{{ insp.vessel.call_sign }}</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">
+                            <i class="bi bi-geo-alt-fill text-muted"></i> {{ insp.location or "No location" }}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('inspector.inspection_details', inspection_id=insp.id) }}"
+                        class="btn-iara-primary" style="padding:4px 12px;font-size:12px;">Open</a>
+                </div>
+                {% endfor %}
                 {% else %}
-                    <p class="text-muted mb-0">No inspections scheduled for today.</p>
+                <div class="empty-state" style="padding:30px;">
+                    <i class="bi bi-calendar-check" style="color:var(--iara-success);"></i>
+                    <h5>All Clear</h5>
+                    <p style="margin-bottom:0;">No inspections scheduled for today.</p>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Pending Violations -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-danger text-white">
-                Open Violations ({{ pending_resolution | length }})
+    <div class="col-md-6">
+        <div class="iara-card h-100" style="border-color:#fca5a5;">
+            <div class="iara-card-header" style="background:#fef2f2;border-bottom-color:#fca5a5;">
+                <h2 class="iara-card-title" style="color:#dc2626;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Open Violations
+                </h2>
+                <span class="iara-badge badge-sev-critical">{{ pending_resolution|length }}</span>
             </div>
-            <div class="card-body">
+            <div class="iara-card-body" style="padding:0;">
                 {% if pending_resolution %}
-                    <ul class="list-group list-group-flush">
-                        {% for v in pending_resolution %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-truncate me-2" style="max-width:200px;">
-                                {{ v.description or v.violation_code.code if v.violation_code else "No code" }}
-                            </span>
-                            <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}"
-                               class="btn btn-sm btn-outline-danger">Resolve</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                {% for v in pending_resolution %}
+                <div
+                    style="padding:14px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <span class="iara-badge badge-sev-high"
+                            style="font-size:10px;padding:2px 6px;margin-bottom:4px;">
+                            {{ v.violation_code.code if v.violation_code else "No Code" }}
+                        </span>
+                        <div
+                            style="font-size:13px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            {{ v.description or "No description provided" }}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}" class="btn-iara-danger"
+                        style="padding:4px 12px;font-size:12px;">Resolve</a>
+                </div>
+                {% endfor %}
                 {% else %}
-                    <p class="text-muted mb-0">No unresolved violations.</p>
+                <div class="empty-state" style="padding:30px;">
+                    <i class="bi bi-shield-check" style="color:var(--iara-success);"></i>
+                    <h5>No Open Violations</h5>
+                    <p style="margin-bottom:0;">All recorded violations are resolved.</p>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-</div>
-
-<div class="row">
-
     <!-- Corrected waiting review -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                Corrected — Pending Admin Review ({{ corrected_waiting | length }})
+    <div class="col-md-6">
+        <div class="iara-card h-100" style="border-color:#fde68a;">
+            <div class="iara-card-header" style="background:#fffbeb;border-bottom-color:#fde68a;">
+                <h2 class="iara-card-title" style="color:#b45309;">
+                    <i class="bi bi-hourglass-split"></i> Corrected — Pending Admin
+                </h2>
+                <span class="iara-badge badge-admin">{{ corrected_waiting|length }}</span>
             </div>
-            <div class="card-body">
+            <div class="iara-card-body" style="padding:0;">
                 {% if corrected_waiting %}
-                    <ul class="list-group list-group-flush">
-                        {% for v in corrected_waiting %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-truncate me-2" style="max-width:200px;">
-                                {{ v.description or "—" }}
-                            </span>
-                            <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}"
-                               class="btn btn-sm btn-outline-warning">View</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                {% for v in corrected_waiting %}
+                <div
+                    style="padding:14px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <div
+                        style="font-size:13px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {{ v.description or "—" }}
+                    </div>
+                    <a href="{{ url_for('inspector.violation_details', violation_id=v.id) }}" class="btn-iara-secondary"
+                        style="padding:4px 12px;font-size:12px;background:#fef3c7;color:#92400e;border-color:#fcd34d;">Review</a>
+                </div>
+                {% endfor %}
                 {% else %}
-                    <p class="text-muted mb-0">No corrected violations awaiting review.</p>
+                <div class="empty-state" style="padding:30px;">
+                    <i class="bi bi-check2-all" style="color:var(--text-secondary);"></i>
+                    <h5 style="color:var(--text-secondary);">Nothing Pending</h5>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Missing Evidence -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-info text-dark">
-                Violations Missing Evidence ({{ violations_missing_evidence | length }})
+    <div class="col-md-6">
+        <div class="iara-card h-100" style="border-color:#bae6fd;">
+            <div class="iara-card-header" style="background:#f0f9ff;border-bottom-color:#bae6fd;">
+                <h2 class="iara-card-title" style="color:#0369a1;">
+                    <i class="bi bi-camera-fill"></i> Missing Evidence
+                </h2>
+                <span class="iara-badge badge-inspector" style="background:#0369a1;">{{
+                    violations_missing_evidence|length }}</span>
             </div>
-            <div class="card-body">
+            <div class="iara-card-body" style="padding:0;">
                 {% if violations_missing_evidence %}
-                    <ul class="list-group list-group-flush">
-                        {% for v in violations_missing_evidence %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-truncate me-2" style="max-width:200px;">
-                                {{ v.description or "—" }}
-                            </span>
-                            <a href="{{ url_for('inspector.upload_evidence', violation_id=v.id) }}"
-                               class="btn btn-sm btn-outline-info">Add</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                {% for v in violations_missing_evidence %}
+                <div
+                    style="padding:14px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <div
+                        style="font-size:13px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {{ v.description or "—" }}
+                    </div>
+                    <a href="{{ url_for('inspector.upload_evidence', violation_id=v.id) }}" class="btn-iara-secondary"
+                        style="padding:4px 12px;font-size:12px;background:#e0f2fe;color:#0369a1;border-color:#bae6fd;"><i
+                            class="bi bi-upload"></i> Upload</a>
+                </div>
+                {% endfor %}
                 {% else %}
-                    <p class="text-muted mb-0">All violations have evidence attached.</p>
+                <div class="empty-state" style="padding:30px;">
+                    <i class="bi bi-images" style="color:var(--text-secondary);"></i>
+                    <h5 style="color:var(--text-secondary);">All Evidence Fastened</h5>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
-
 </div>
 
 <!-- Recent Inspections -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-secondary text-white">
-        Recent Inspections (Last 10)
+<div class="iara-card mb-4">
+    <div class="iara-card-header">
+        <h2 class="iara-card-title"><i class="bi bi-clock-history"></i> Recent Inspections (Last 10)</h2>
     </div>
-    <div class="card-body p-0">
-        {% if recent_inspections %}
-        <table class="table table-sm table-bordered mb-0">
-            <thead class="table-light">
+    <div class="iara-table-wrapper">
+        <table class="iara-table">
+            <thead>
                 <tr>
-                    <th>#</th>
+                    <th>ID</th>
                     <th>Vessel</th>
                     <th>Date</th>
                     <th>Status</th>
                     <th>Score</th>
-                    <th></th>
+                    <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
             <tbody>
+                {% if recent_inspections %}
                 {% for insp in recent_inspections %}
                 <tr>
-                    <td>{{ insp.id }}</td>
-                    <td>{{ insp.vessel.call_sign }}</td>
-                    <td>{{ insp.date }}</td>
+                    <td style="font-size:12px;color:var(--text-secondary);">#{{ insp.id }}</td>
+                    <td style="font-weight:600;font-size:13.5px;">{{ insp.vessel.call_sign }}</td>
+                    <td style="font-size:12px;color:var(--text-secondary);">{{ insp.date }}</td>
                     <td>
-                        {% if insp.status == "draft" %}<span class="badge bg-secondary">Draft</span>
-                        {% elif insp.status == "submitted" %}<span class="badge bg-primary">Submitted</span>
-                        {% elif insp.status == "approved" %}<span class="badge bg-success">Approved</span>
-                        {% elif insp.status == "rejected" %}<span class="badge bg-danger">Rejected</span>
+                        {% if insp.status == "draft" %}<span class="iara-badge"
+                            style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">Draft</span>
+                        {% elif insp.status == "submitted" %}<span class="iara-badge badge-admin">Submitted</span>
+                        {% elif insp.status == "approved" %}<span class="iara-badge badge-status-active">Approved</span>
+                        {% elif insp.status == "rejected" %}<span
+                            class="iara-badge badge-status-expired">Rejected</span>
                         {% endif %}
                     </td>
-                    <td>{{ insp.final_score if insp.final_score is not none else insp.score }}</td>
                     <td>
+                        {% set s = insp.final_score if insp.final_score is not none else insp.score %}
+                        {% if s %}
+                        <span
+                            style="font-weight:700;color:{% if s>=80 %}var(--iara-success){% elif s>=60 %}var(--iara-warning){% else %}var(--iara-danger){% endif %};">{{
+                            s }}</span>
+                        <span style="font-size:11px;color:var(--text-secondary);">/100</span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
                         <a href="{{ url_for('inspector.inspection_details', inspection_id=insp.id) }}"
-                           class="btn btn-xs btn-sm btn-info">Open</a>
+                            class="btn-iara-secondary" style="padding:4px 12px;font-size:12px;">Open</a>
                     </td>
                 </tr>
                 {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i class="bi bi-clipboard-x"></i>
+                            <h5>No completed inspections</h5>
+                            <p>Submit inspections to see history here.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
-        {% else %}
-            <p class="text-muted p-3 mb-0">No completed inspections yet.</p>
-        {% endif %}
     </div>
 </div>
 
