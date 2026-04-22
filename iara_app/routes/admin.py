@@ -7,19 +7,27 @@
 # ---------------------------------------------------------
 
 import csv
+import os
+import uuid
 import secrets
 from datetime import date, timedelta, datetime
 from io import StringIO
 
 from flask import (
     Blueprint, render_template, redirect, url_for,
-    flash, request, abort, make_response, jsonify
+    flash, request, abort, make_response, jsonify, send_from_directory
 )
 from flask_login import login_required, current_user
 
 from .. import db
-from ..models import User, Vessel, Permit, Inspection, Violation, ScheduledInspection
-from ..forms import VesselForm, PermitForm, CreateUserForm, EditUserForm
+from ..models import (
+    User, Vessel, Permit, Inspection, Violation, ScheduledInspection,
+    VesselDocument, VesselPhoto, VesselOwnershipHistory
+)
+from ..forms import (
+    VesselForm, PermitForm, CreateUserForm, EditUserForm,
+    VesselDocumentUploadForm, VesselPhotoUploadForm, VesselOwnershipForm
+)
 from ..decorators import admin_required
 from ..utils import log_action
 
@@ -388,14 +396,76 @@ def admin_reset_user_password(user_id):
 
 
 
+# ─── Upload directory helpers ─────────────────────────────────────────────────
+
+def _upload_dir():
+    """Return the project-level uploads/ directory, creating subdirs as needed."""
+    from flask import current_app
+    base = os.path.join(current_app.root_path, "..", "uploads")
+    for sub in ("vessel_docs", "vessel_photos"):
+        os.makedirs(os.path.join(base, sub), exist_ok=True)
+    return os.path.abspath(base)
+
+
+def _save_upload(file_storage, subfolder, allowed_exts):
+    """Save a FileStorage object to uploads/<subfolder>/ with a UUID name. Returns filename."""
+    ext = file_storage.filename.rsplit(".", 1)[-1].lower()
+    if ext not in allowed_exts:
+        raise ValueError(f"Extension .{ext} not allowed")
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    dest = os.path.join(_upload_dir(), subfolder, filename)
+    file_storage.save(dest)
+    return filename
+
+
 # ── VESSELS ───────────────────────────────────────────────────────────────────
 
 @bp.route("/vessels")
 @login_required
 @admin_required
 def vessels():
-    all_vessels = Vessel.query.all()
-    return render_template("vessels/vessels.html", vessels=all_vessels, title="Vessel Registry")
+    q           = request.args.get("q", "").strip()
+    status_f    = request.args.get("status", "")
+    port_f      = request.args.get("port", "").strip()
+    page        = request.args.get("page", 1, type=int)
+    per_page    = 15
+
+    query = Vessel.query
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                Vessel.call_sign.ilike(like),
+                Vessel.international_number.ilike(like),
+                Vessel.name_bg.ilike(like),
+                Vessel.name_en.ilike(like),
+                Vessel.owner_name.ilike(like),
+                Vessel.marking.ilike(like),
+            )
+        )
+    if status_f:
+        query = query.filter_by(status=status_f)
+    if port_f:
+        query = query.filter(Vessel.port_registration.ilike(f"%{port_f}%"))
+
+    pagination  = query.order_by(Vessel.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    all_vessels = pagination.items
+
+    # Unique ports for filter dropdown
+    ports = [r[0] for r in db.session.query(Vessel.port_registration)
+             .filter(Vessel.port_registration.isnot(None))
+             .distinct().all()]
+
+    return render_template(
+        "vessels/vessels.html",
+        vessels=all_vessels,
+        pagination=pagination,
+        q=q, status_f=status_f, port_f=port_f,
+        ports=ports,
+        title="Vessel Registry"
+    )
 
 
 @bp.route("/vessels/add", methods=["GET", "POST"])
@@ -403,31 +473,189 @@ def vessels():
 @admin_required
 def add_vessel():
     form = VesselForm()
+    duplicate_warning = None
+
     if form.validate_on_submit():
-        vessel = Vessel(
-            international_number=form.international_number.data,
-            call_sign=form.call_sign.data,
-            marking=form.marking.data,
-            length=form.length.data,
-            width=form.width.data,
-            engine_power=form.engine_power.data,
-            owner_name=form.owner_name.data,
-            captain_name=form.captain_name.data
-        )
-        db.session.add(vessel)
-        db.session.commit()
-        flash("Vessel added successfully!", "success")
-        return redirect(url_for("admin.vessels"))
-    return render_template("vessels/add_vessel.html", form=form, title="Add Vessel")
+        # Duplicate detection
+        dup_number = Vessel.query.filter_by(
+            international_number=form.international_number.data.strip()
+        ).first()
+        dup_sign = Vessel.query.filter(
+            db.func.lower(Vessel.call_sign) == form.call_sign.data.strip().lower()
+        ).first()
+
+        if dup_number:
+            flash(f"⚠ Vessel with International Number '{form.international_number.data}' already exists (#{dup_number.id}). Verify before saving.", "warning")
+        elif dup_sign:
+            flash(f"⚠ Vessel with Call Sign '{form.call_sign.data}' already exists (#{dup_sign.id}). Verify before saving.", "warning")
+        else:
+            vessel = Vessel(
+                international_number=form.international_number.data.strip(),
+                call_sign=form.call_sign.data.strip(),
+                marking=form.marking.data.strip(),
+                name_bg=form.name_bg.data.strip() if form.name_bg.data else None,
+                name_en=form.name_en.data.strip() if form.name_en.data else None,
+                port_registration=form.port_registration.data.strip() if form.port_registration.data else None,
+                registration_date=form.registration_date.data,
+                status=form.status.data,
+                length=form.length.data,
+                width=form.width.data,
+                gross_tonnage=form.gross_tonnage.data,
+                engine_power=form.engine_power.data,
+                owner_name=form.owner_name.data.strip(),
+                owner_egn=form.owner_egn.data.strip() if form.owner_egn.data else None,
+                captain_name=form.captain_name.data.strip(),
+            )
+            db.session.add(vessel)
+            db.session.flush()  # get vessel.id before commit
+
+            # Record initial ownership
+            if vessel.owner_name:
+                history = VesselOwnershipHistory(
+                    vessel_id=vessel.id,
+                    owner_name=vessel.owner_name,
+                    owner_egn=vessel.owner_egn,
+                    from_date=vessel.registration_date or date.today(),
+                    recorded_by_id=current_user.id,
+                )
+                db.session.add(history)
+
+            db.session.commit()
+            log_action("vessel_created", "Vessel", vessel.id,
+                       f"Call sign: {vessel.call_sign}, Status: {vessel.status}")
+            flash(f"Vessel '{vessel.call_sign}' registered successfully!", "success")
+            return redirect(url_for("admin.vessel_details", vessel_id=vessel.id))
+
+    return render_template("vessels/add_vessel.html", form=form, title="Register Vessel")
 
 
 @bp.route("/vessels/<int:vessel_id>")
 @login_required
 @admin_required
 def vessel_details(vessel_id):
-    vessel = db.get_or_404(Vessel, vessel_id)
-    return render_template("vessels/vessel_details.html", vessel=vessel, title="Vessel Details")
+    vessel   = db.get_or_404(Vessel, vessel_id)
+    doc_form   = VesselDocumentUploadForm()
+    photo_form = VesselPhotoUploadForm()
+    own_form   = VesselOwnershipForm()
+    active_tab = request.args.get("tab", "info")
+    return render_template(
+        "vessels/vessel_details.html",
+        vessel=vessel,
+        doc_form=doc_form,
+        photo_form=photo_form,
+        own_form=own_form,
+        active_tab=active_tab,
+        title=f"Vessel — {vessel.call_sign}"
+    )
 
+
+@bp.route("/vessels/<int:vessel_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_vessel(vessel_id):
+    vessel = db.get_or_404(Vessel, vessel_id)
+    form   = VesselForm(obj=vessel)
+
+    if form.validate_on_submit():
+        # Duplicate check (exclude self)
+        dup = Vessel.query.filter(
+            Vessel.international_number == form.international_number.data.strip(),
+            Vessel.id != vessel.id
+        ).first()
+        if dup:
+            flash(f"⚠ Another vessel already uses International Number '{form.international_number.data}' (#{dup.id}).", "warning")
+        else:
+            old_status = vessel.status
+            vessel.international_number = form.international_number.data.strip()
+            vessel.call_sign            = form.call_sign.data.strip()
+            vessel.marking              = form.marking.data.strip()
+            vessel.name_bg              = form.name_bg.data.strip() if form.name_bg.data else None
+            vessel.name_en              = form.name_en.data.strip() if form.name_en.data else None
+            vessel.port_registration    = form.port_registration.data.strip() if form.port_registration.data else None
+            vessel.registration_date    = form.registration_date.data
+            vessel.status               = form.status.data
+            vessel.length               = form.length.data
+            vessel.width                = form.width.data
+            vessel.gross_tonnage        = form.gross_tonnage.data
+            vessel.engine_power         = form.engine_power.data
+            vessel.owner_name           = form.owner_name.data.strip()
+            vessel.owner_egn            = form.owner_egn.data.strip() if form.owner_egn.data else None
+            vessel.captain_name         = form.captain_name.data.strip()
+
+            # Auto-expire permits when vessel is scrapped
+            if old_status != "Scrapped" and vessel.status == "Scrapped":
+                for permit in vessel.permits:
+                    if permit.status == "Active":
+                        permit.status = "Expired"
+                flash("All active permits have been expired because the vessel was scrapped.", "warning")
+
+            db.session.commit()
+            log_action("vessel_edited", "Vessel", vessel.id,
+                       f"Status: {old_status} → {vessel.status}")
+            flash(f"Vessel '{vessel.call_sign}' updated successfully!", "success")
+            return redirect(url_for("admin.vessel_details", vessel_id=vessel.id))
+
+    return render_template("vessels/edit_vessel.html", form=form, vessel=vessel, title="Edit Vessel")
+
+
+@bp.route("/vessels/<int:vessel_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_vessel(vessel_id):
+    vessel = db.get_or_404(Vessel, vessel_id)
+
+    if vessel.inspections:
+        flash(
+            f"Cannot delete '{vessel.call_sign}': it has {len(vessel.inspections)} inspection record(s). "
+            "Change its status to Scrapped instead.",
+            "danger"
+        )
+        return redirect(url_for("admin.vessel_details", vessel_id=vessel.id))
+
+    if vessel.permits:
+        flash(
+            f"Cannot delete '{vessel.call_sign}': it has {len(vessel.permits)} permit record(s). "
+            "Remove them first or mark the vessel as Scrapped.",
+            "danger"
+        )
+        return redirect(url_for("admin.vessel_details", vessel_id=vessel.id))
+
+    call_sign = vessel.call_sign
+    log_action("vessel_deleted", "Vessel", vessel.id, f"Call sign: {call_sign}")
+    db.session.delete(vessel)
+    db.session.commit()
+    flash(f"Vessel '{call_sign}' has been permanently deleted.", "info")
+    return redirect(url_for("admin.vessels"))
+
+
+@bp.route("/vessels/<int:vessel_id>/status", methods=["POST"])
+@login_required
+@admin_required
+def vessel_change_status(vessel_id):
+    vessel     = db.get_or_404(Vessel, vessel_id)
+    new_status = request.form.get("status", "").strip()
+    valid      = ["Active", "Suspended", "Scrapped"]
+    if new_status not in valid:
+        flash("Invalid status value.", "danger")
+        return redirect(url_for("admin.vessel_details", vessel_id=vessel.id))
+
+    old_status    = vessel.status
+    vessel.status = new_status
+
+    if old_status != "Scrapped" and new_status == "Scrapped":
+        for permit in vessel.permits:
+            if permit.status == "Active":
+                permit.status = "Expired"
+        flash("All active permits have been expired because the vessel was scrapped.", "warning")
+
+    db.session.commit()
+    log_action("vessel_status_changed", "Vessel", vessel.id,
+               f"{old_status} → {new_status}")
+    flash(f"Vessel status changed to '{new_status}'.", "success")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel.id))
+
+
+# ── VESSEL — INSPECTION HISTORY (keep for back-compat) ───────────────────────
 
 @bp.route("/vessels/<int:vessel_id>/inspections")
 @login_required
@@ -447,10 +675,10 @@ def vessel_inspection_history(vessel_id):
                 severity_counts[v.severity] += 1
             evidence_count += len(v.evidence)
         history.append({
-            "inspection":      insp,
+            "inspection":       insp,
             "total_violations": len(insp.violations),
-            "severity_counts": severity_counts,
-            "evidence_count":  evidence_count,
+            "severity_counts":  severity_counts,
+            "evidence_count":   evidence_count,
         })
 
     return render_template(
@@ -471,6 +699,188 @@ def vessel_qr_print(vessel_id):
         vessel=vessel,
         active_permit=active_permit
     )
+
+
+# ── VESSEL DOCUMENTS ──────────────────────────────────────────────────────────
+
+@bp.route("/vessels/<int:vessel_id>/documents/upload", methods=["POST"])
+@login_required
+@admin_required
+def vessel_upload_document(vessel_id):
+    vessel = db.get_or_404(Vessel, vessel_id)
+    form   = VesselDocumentUploadForm()
+    if form.validate_on_submit():
+        try:
+            filename = _save_upload(
+                form.file.data, "vessel_docs",
+                {"pdf", "doc", "docx", "jpg", "jpeg", "png"}
+            )
+            doc = VesselDocument(
+                vessel_id=vessel.id,
+                uploaded_by_id=current_user.id,
+                doc_type=form.doc_type.data,
+                filename=filename,
+                original_name=form.file.data.filename,
+                notes=form.notes.data,
+            )
+            db.session.add(doc)
+            db.session.commit()
+            log_action("vessel_doc_uploaded", "VesselDocument", doc.id,
+                       f"Vessel {vessel.id}: {doc.original_name}")
+            flash("Document uploaded successfully.", "success")
+        except Exception as e:
+            flash(f"Upload failed: {e}", "danger")
+    else:
+        for field, errs in form.errors.items():
+            flash(f"{field}: {', '.join(errs)}", "danger")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel.id, tab="documents"))
+
+
+@bp.route("/vessels/<int:vessel_id>/documents/<int:doc_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def vessel_delete_document(vessel_id, doc_id):
+    doc = db.get_or_404(VesselDocument, doc_id)
+    if doc.vessel_id != vessel_id:
+        abort(404)
+    try:
+        path = os.path.join(_upload_dir(), "vessel_docs", doc.filename)
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+    db.session.delete(doc)
+    db.session.commit()
+    flash("Document deleted.", "info")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel_id, tab="documents"))
+
+
+@bp.route("/uploads/vessel_docs/<path:filename>")
+@login_required
+@admin_required
+def serve_vessel_doc(filename):
+    folder = os.path.join(_upload_dir(), "vessel_docs")
+    return send_from_directory(folder, filename)
+
+
+# ── VESSEL PHOTOS ─────────────────────────────────────────────────────────────
+
+@bp.route("/vessels/<int:vessel_id>/photos/upload", methods=["POST"])
+@login_required
+@admin_required
+def vessel_upload_photo(vessel_id):
+    vessel = db.get_or_404(Vessel, vessel_id)
+    form   = VesselPhotoUploadForm()
+    if form.validate_on_submit():
+        try:
+            filename = _save_upload(
+                form.file.data, "vessel_photos",
+                {"jpg", "jpeg", "png", "webp"}
+            )
+            if form.is_primary.data:
+                # Unset existing primary
+                VesselPhoto.query.filter_by(vessel_id=vessel.id, is_primary=True)\
+                    .update({"is_primary": False})
+            photo = VesselPhoto(
+                vessel_id=vessel.id,
+                uploaded_by_id=current_user.id,
+                filename=filename,
+                caption=form.caption.data,
+                is_primary=form.is_primary.data,
+            )
+            db.session.add(photo)
+            db.session.commit()
+            log_action("vessel_photo_uploaded", "VesselPhoto", photo.id,
+                       f"Vessel {vessel.id}")
+            flash("Photo uploaded successfully.", "success")
+        except Exception as e:
+            flash(f"Upload failed: {e}", "danger")
+    else:
+        for field, errs in form.errors.items():
+            flash(f"{field}: {', '.join(errs)}", "danger")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel.id, tab="photos"))
+
+
+@bp.route("/vessels/<int:vessel_id>/photos/<int:photo_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def vessel_delete_photo(vessel_id, photo_id):
+    photo = db.get_or_404(VesselPhoto, photo_id)
+    if photo.vessel_id != vessel_id:
+        abort(404)
+    try:
+        path = os.path.join(_upload_dir(), "vessel_photos", photo.filename)
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+    db.session.delete(photo)
+    db.session.commit()
+    flash("Photo deleted.", "info")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel_id, tab="photos"))
+
+
+@bp.route("/vessels/<int:vessel_id>/photos/<int:photo_id>/set-primary", methods=["POST"])
+@login_required
+@admin_required
+def vessel_set_primary_photo(vessel_id, photo_id):
+    photo = db.get_or_404(VesselPhoto, photo_id)
+    if photo.vessel_id != vessel_id:
+        abort(404)
+    VesselPhoto.query.filter_by(vessel_id=vessel_id, is_primary=True)\
+        .update({"is_primary": False})
+    photo.is_primary = True
+    db.session.commit()
+    flash("Primary photo updated.", "success")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel_id, tab="photos"))
+
+
+@bp.route("/uploads/vessel_photos/<path:filename>")
+@login_required
+@admin_required
+def serve_vessel_photo(filename):
+    folder = os.path.join(_upload_dir(), "vessel_photos")
+    return send_from_directory(folder, filename)
+
+
+# ── VESSEL OWNERSHIP HISTORY ──────────────────────────────────────────────────
+
+@bp.route("/vessels/<int:vessel_id>/ownership/add", methods=["POST"])
+@login_required
+@admin_required
+def vessel_add_ownership(vessel_id):
+    vessel = db.get_or_404(Vessel, vessel_id)
+    form   = VesselOwnershipForm()
+    if form.validate_on_submit():
+        entry = VesselOwnershipHistory(
+            vessel_id=vessel.id,
+            recorded_by_id=current_user.id,
+            owner_name=form.owner_name.data.strip(),
+            owner_egn=form.owner_egn.data.strip() if form.owner_egn.data else None,
+            from_date=form.from_date.data,
+            to_date=form.to_date.data,
+            notes=form.notes.data,
+        )
+        # Close previous open entry
+        prev = VesselOwnershipHistory.query.filter_by(
+            vessel_id=vessel.id, to_date=None
+        ).first()
+        if prev and prev.id != entry.id:
+            prev.to_date = form.from_date.data
+
+        # Update vessel current owner
+        vessel.owner_name = form.owner_name.data.strip()
+        vessel.owner_egn  = form.owner_egn.data.strip() if form.owner_egn.data else None
+
+        db.session.add(entry)
+        db.session.commit()
+        log_action("vessel_ownership_added", "VesselOwnershipHistory", entry.id,
+                   f"Vessel {vessel.id}: new owner {entry.owner_name}")
+        flash("Ownership transfer recorded.", "success")
+    else:
+        for field, errs in form.errors.items():
+            flash(f"{field}: {', '.join(errs)}", "danger")
+    return redirect(url_for("admin.vessel_details", vessel_id=vessel.id, tab="ownership"))
 
 
 # ── PERMITS ───────────────────────────────────────────────────────────────────

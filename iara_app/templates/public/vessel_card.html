@@ -5,79 +5,111 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vessel Card — {{ vessel.call_sign }}</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
-  body { background: #f0f4f8; font-family: Arial, sans-serif; }
-  .card-header-main { background: #1e293b; color: white; padding: 20px; border-radius: 12px 12px 0 0; }
-  .score-badge { font-size: 2rem; font-weight: 700; }
-  .iara-logo { font-size: 0.75rem; letter-spacing: 0.15em; opacity: 0.7; }
+  body{background:linear-gradient(135deg,#0f172a,#1e3a5f);min-height:100vh;font-family:'Inter',sans-serif;padding:20px 0 40px;}
+  .card-wrap{max-width:460px;margin:auto;}
+  .vessel-header{background:linear-gradient(135deg,#1e3a5f,#0369a1);color:white;padding:24px;border-radius:16px 16px 0 0;}
+  .vessel-body{background:white;padding:24px;border-radius:0 0 16px 16px;}
+  .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:2px;}
+  .val{font-size:14px;font-weight:600;color:#0f172a;}
+  .divider{border:none;border-top:1px solid #e2e8f0;margin:16px 0;}
+  .status-active{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+  .status-suspended{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
+  .status-scrapped{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+  .badge-pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;}
+  .spec-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;}
+  .spec-val{font-size:20px;font-weight:800;color:#0f172a;line-height:1;}
+  .spec-unit{font-size:11px;color:#64748b;}
 </style>
 </head>
 <body>
-<div class="container" style="max-width:480px; margin-top:30px;">
+<div class="card-wrap">
+  <div class="vessel-header">
+    <div style="font-size:10px;letter-spacing:.2em;opacity:.7;margin-bottom:8px;">IARA — FISHERIES INSPECTION AUTHORITY</div>
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h2 style="font-size:22px;font-weight:800;margin:0;">{{ vessel.call_sign }}</h2>
+        {% if vessel.name_en or vessel.name_bg %}
+        <div style="font-size:13px;opacity:.85;margin-top:2px;">{{ vessel.name_en or vessel.name_bg }}</div>
+        {% endif %}
+        <div style="font-family:monospace;font-size:12px;opacity:.7;margin-top:4px;">{{ vessel.international_number }}</div>
+      </div>
+      {% if vessel.status == 'Active' %}
+      <span class="badge-pill status-active"><i class="bi bi-check-circle-fill"></i>Active</span>
+      {% elif vessel.status == 'Suspended' %}
+      <span class="badge-pill status-suspended"><i class="bi bi-pause-circle-fill"></i>Suspended</span>
+      {% else %}
+      <span class="badge-pill status-scrapped"><i class="bi bi-x-circle-fill"></i>Scrapped</span>
+      {% endif %}
+    </div>
+  </div>
 
-  <div class="card shadow-lg" style="border-radius:12px;">
-    <div class="card-header-main">
-      <div class="iara-logo">IARA — FISHERIES INSPECTION AUTHORITY</div>
-      <h3 class="mb-0 mt-1">{{ vessel.call_sign }}</h3>
-      <div style="opacity:.75; font-size:.9rem;">{{ vessel.international_number }}</div>
+  <div class="vessel-body">
+    {% if vessel.status == 'Suspended' %}
+    <div class="alert alert-warning py-2 mb-3" style="font-size:13px;border-radius:10px;"><i class="bi bi-exclamation-triangle-fill me-2"></i>This vessel is currently <strong>suspended</strong>.</div>
+    {% elif vessel.status == 'Scrapped' %}
+    <div class="alert alert-danger py-2 mb-3" style="font-size:13px;border-radius:10px;"><i class="bi bi-x-circle-fill me-2"></i>This vessel has been <strong>scrapped</strong> and is no longer operational.</div>
+    {% endif %}
+
+    <div class="row g-3 mb-3">
+      <div class="col-6"><div class="label">Owner</div><div class="val">{{ vessel.owner_name }}</div></div>
+      <div class="col-6"><div class="label">Captain</div><div class="val">{{ vessel.captain_name }}</div></div>
+      {% if vessel.port_registration %}
+      <div class="col-6"><div class="label">Port of Registration</div><div class="val">{{ vessel.port_registration }}</div></div>
+      {% endif %}
+      {% if vessel.registration_date %}
+      <div class="col-6"><div class="label">Registered</div><div class="val">{{ vessel.registration_date }}</div></div>
+      {% endif %}
     </div>
 
-    <div class="card-body p-4">
-      <div class="row mb-3">
-        <div class="col-6"><strong>Owner</strong><br>{{ vessel.owner_name }}</div>
-        <div class="col-6"><strong>Captain</strong><br>{{ vessel.captain_name }}</div>
-      </div>
-      <div class="row mb-3">
-        <div class="col-4"><strong>Length</strong><br>{{ vessel.length }}m</div>
-        <div class="col-4"><strong>Width</strong><br>{{ vessel.width }}m</div>
-        <div class="col-4"><strong>Engine</strong><br>{{ vessel.engine_power }}HP</div>
-      </div>
+    <hr class="divider">
 
-      <hr>
-
-      <h6 class="text-muted text-uppercase mb-2" style="font-size:.75rem;letter-spacing:.08em;">Active Permit</h6>
-      {% if active_permit %}
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <strong>{{ active_permit.permit_number }}</strong><br>
-          <small class="text-muted">{{ active_permit.permit_type }} — Expires {{ active_permit.expiry_date }}</small>
-        </div>
-        <span class="badge bg-success fs-6">Active</span>
-      </div>
-      {% else %}
-      <div class="alert alert-danger py-2">No active permit on file</div>
-      {% endif %}
-
-      <hr>
-
-      <h6 class="text-muted text-uppercase mb-2" style="font-size:.75rem;letter-spacing:.08em;">Last Inspection</h6>
-      {% if last_inspection %}
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <strong>{{ last_inspection.date }}</strong><br>
-          <small class="text-muted">{{ last_inspection.location }}</small>
-        </div>
-        {% set score = last_inspection.final_score if last_inspection.final_score is not none else last_inspection.score %}
-        <span class="badge fs-5
-          {% if score >= 80 %}bg-success
-          {% elif score >= 60 %}bg-warning text-dark
-          {% else %}bg-danger{% endif %}">
-          {{ score }}/100
-        </span>
-      </div>
-      {% if open_violations %}
-      <div class="alert alert-warning py-2">
-        <strong>{{ open_violations|length }} open violation(s)</strong>
-      </div>
-      {% else %}
-      <div class="alert alert-success py-2">No open violations</div>
-      {% endif %}
-      {% else %}
-      <p class="text-muted">No inspections on record.</p>
-      {% endif %}
-
+    <div class="row g-2 mb-3">
+      {% if vessel.length %}<div class="col-3"><div class="spec-box"><div class="spec-val">{{ vessel.length }}</div><div class="spec-unit">Length m</div></div></div>{% endif %}
+      {% if vessel.width %}<div class="col-3"><div class="spec-box"><div class="spec-val">{{ vessel.width }}</div><div class="spec-unit">Width m</div></div></div>{% endif %}
+      {% if vessel.gross_tonnage %}<div class="col-3"><div class="spec-box"><div class="spec-val">{{ vessel.gross_tonnage }}</div><div class="spec-unit">GT</div></div></div>{% endif %}
+      {% if vessel.engine_power %}<div class="col-3"><div class="spec-box"><div class="spec-val">{{ vessel.engine_power }}</div><div class="spec-unit">HP</div></div></div>{% endif %}
     </div>
-    <div class="card-footer text-muted text-center" style="font-size:.75rem;">
+
+    <hr class="divider">
+
+    <div class="label mb-2">Active Permit</div>
+    {% if active_permit %}
+    <div class="d-flex justify-content-between align-items-center p-3 mb-3" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+      <div>
+        <div style="font-weight:700;font-size:14px;">{{ active_permit.permit_number }}</div>
+        <div style="font-size:12px;color:#64748b;">{{ active_permit.permit_type }} · Expires {{ active_permit.expiry_date }}</div>
+      </div>
+      <span class="badge-pill status-active" style="font-size:11px;"><i class="bi bi-check-circle-fill"></i>Valid</span>
+    </div>
+    {% else %}
+    <div class="p-3 mb-3" style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:13px;color:#dc2626;"><i class="bi bi-x-circle-fill me-2"></i>No active permit on file</div>
+    {% endif %}
+
+    <div class="label mb-2">Last Inspection</div>
+    {% if last_inspection %}
+    {% set score = last_inspection.final_score if last_inspection.final_score is not none else last_inspection.score %}
+    <div class="d-flex justify-content-between align-items-center p-3 mb-2" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+      <div>
+        <div style="font-weight:700;font-size:14px;">{{ last_inspection.date }}</div>
+        <div style="font-size:12px;color:#64748b;">{{ last_inspection.location or 'Location not specified' }}</div>
+      </div>
+      <div class="spec-box" style="min-width:64px;">
+        <div class="spec-val" style="color:{% if score >= 80 %}#15803d{% elif score >= 60 %}#b45309{% else %}#dc2626{% endif %};">{{ score }}</div>
+        <div class="spec-unit">/100</div>
+      </div>
+    </div>
+    {% if open_violations %}
+    <div class="p-2" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#b45309;"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ open_violations|length }} open violation(s)</div>
+    {% else %}
+    <div class="p-2" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#15803d;"><i class="bi bi-check-circle-fill me-1"></i>No open violations</div>
+    {% endif %}
+    {% else %}
+    <p class="text-muted" style="font-size:13px;">No inspections on record.</p>
+    {% endif %}
+
+    <div style="margin-top:20px;text-align:center;font-size:10px;color:#94a3b8;">
       Verified by IARA System · {{ vessel.marking }}
     </div>
   </div>

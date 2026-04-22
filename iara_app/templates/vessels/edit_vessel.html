@@ -3,18 +3,27 @@
 
 <div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-4">
     <div class="page-header-left">
-        <h1 class="page-title">Register New Vessel</h1>
-        <p class="page-subtitle">Enter complete vessel information for the registry</p>
+        <h1 class="page-title">Edit Vessel</h1>
+        <p class="page-subtitle">Update registration data for <strong>{{ vessel.call_sign }}</strong></p>
     </div>
-    <a href="{{ url_for('admin.vessels') }}" class="btn-iara-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Fleet
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.vessel_details', vessel_id=vessel.id) }}" class="btn-iara-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Details
+        </a>
+        {% if vessel.status == 'Active' %}
+        <span class="iara-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:8px 14px;"><i class="bi bi-check-circle-fill me-1"></i>Active</span>
+        {% elif vessel.status == 'Suspended' %}
+        <span class="iara-badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;padding:8px 14px;"><i class="bi bi-pause-circle-fill me-1"></i>Suspended</span>
+        {% else %}
+        <span class="iara-badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:8px 14px;"><i class="bi bi-x-circle-fill me-1"></i>Scrapped</span>
+        {% endif %}
+    </div>
 </div>
 
 <form method="POST" novalidate>
     {{ form.hidden_tag() }}
 
-    <!-- Section: Identity -->
+    <!-- Identity -->
     <div class="iara-card mb-4">
         <div class="iara-card-header">
             <h2 class="iara-card-title"><i class="bi bi-fingerprint"></i> Vessel Identity</h2>
@@ -23,34 +32,32 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.international_number.label.text }}</label>
-                    {{ form.international_number(class="form-control" + (" is-invalid" if form.international_number.errors else ""), placeholder="e.g. BGR-2024-001") }}
+                    {{ form.international_number(class="form-control" + (" is-invalid" if form.international_number.errors else "")) }}
                     {% for e in form.international_number.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.call_sign.label.text }}</label>
-                    {{ form.call_sign(class="form-control" + (" is-invalid" if form.call_sign.errors else ""), placeholder="e.g. LZBG") }}
+                    {{ form.call_sign(class="form-control" + (" is-invalid" if form.call_sign.errors else "")) }}
                     {% for e in form.call_sign.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.marking.label.text }}</label>
-                    {{ form.marking(class="form-control" + (" is-invalid" if form.marking.errors else ""), placeholder="e.g. BG-001") }}
+                    {{ form.marking(class="form-control" + (" is-invalid" if form.marking.errors else "")) }}
                     {% for e in form.marking.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.name_bg.label.text }}</label>
-                    {{ form.name_bg(class="form-control" + (" is-invalid" if form.name_bg.errors else ""), placeholder="Наименование (по регистъра)") }}
-                    {% for e in form.name_bg.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    {{ form.name_bg(class="form-control") }}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.name_en.label.text }}</label>
-                    {{ form.name_en(class="form-control" + (" is-invalid" if form.name_en.errors else ""), placeholder="Name in English") }}
-                    {% for e in form.name_en.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    {{ form.name_en(class="form-control") }}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Section: Registration -->
+    <!-- Registration -->
     <div class="iara-card mb-4">
         <div class="iara-card-header">
             <h2 class="iara-card-title"><i class="bi bi-file-earmark-text"></i> Registration Details</h2>
@@ -59,7 +66,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.port_registration.label.text }}</label>
-                    {{ form.port_registration(class="form-control", placeholder="e.g. Varna") }}
+                    {{ form.port_registration(class="form-control") }}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.registration_date.label.text }}</label>
@@ -69,12 +76,15 @@
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.status.label.text }}</label>
                     {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
                     {% for e in form.status.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    {% if form.status.data == 'Scrapped' or vessel.status != 'Scrapped' %}
+                    <div class="form-text" style="font-size:11px;color:#dc2626;"><i class="bi bi-exclamation-triangle"></i> Changing to Scrapped will auto-expire all active permits.</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Section: Dimensions -->
+    <!-- Dimensions -->
     <div class="iara-card mb-4">
         <div class="iara-card-header">
             <h2 class="iara-card-title"><i class="bi bi-rulers"></i> Technical Specifications</h2>
@@ -84,38 +94,36 @@
                 <div class="col-md-3">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.length.label.text }}</label>
                     <div class="input-group">
-                        {{ form.length(class="form-control" + (" is-invalid" if form.length.errors else ""), placeholder="0.0") }}
+                        {{ form.length(class="form-control" + (" is-invalid" if form.length.errors else "")) }}
                         <span class="input-group-text">m</span>
-                        {% for e in form.length.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                     </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.width.label.text }}</label>
                     <div class="input-group">
-                        {{ form.width(class="form-control" + (" is-invalid" if form.width.errors else ""), placeholder="0.0") }}
+                        {{ form.width(class="form-control") }}
                         <span class="input-group-text">m</span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.gross_tonnage.label.text }}</label>
                     <div class="input-group">
-                        {{ form.gross_tonnage(class="form-control", placeholder="0.0") }}
+                        {{ form.gross_tonnage(class="form-control") }}
                         <span class="input-group-text">GT</span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.engine_power.label.text }}</label>
                     <div class="input-group">
-                        {{ form.engine_power(class="form-control" + (" is-invalid" if form.engine_power.errors else ""), placeholder="0") }}
+                        {{ form.engine_power(class="form-control" + (" is-invalid" if form.engine_power.errors else "")) }}
                         <span class="input-group-text">HP</span>
-                        {% for e in form.engine_power.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Section: Ownership -->
+    <!-- Ownership -->
     <div class="iara-card mb-4">
         <div class="iara-card-header">
             <h2 class="iara-card-title"><i class="bi bi-person-badge"></i> Ownership & Personnel</h2>
@@ -124,28 +132,27 @@
             <div class="row g-3">
                 <div class="col-md-5">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.owner_name.label.text }}</label>
-                    {{ form.owner_name(class="form-control" + (" is-invalid" if form.owner_name.errors else ""), placeholder="Full name") }}
+                    {{ form.owner_name(class="form-control" + (" is-invalid" if form.owner_name.errors else "")) }}
                     {% for e in form.owner_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.owner_egn.label.text }}</label>
-                    {{ form.owner_egn(class="form-control", placeholder="10-digit EGN") }}
-                    <div class="form-text" style="font-size:11px;"><i class="bi bi-lock-fill"></i> Admin-only, not shown publicly</div>
+                    {{ form.owner_egn(class="form-control") }}
+                    <div class="form-text" style="font-size:11px;"><i class="bi bi-lock-fill"></i> Admin-only</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">{{ form.captain_name.label.text }}</label>
-                    {{ form.captain_name(class="form-control" + (" is-invalid" if form.captain_name.errors else ""), placeholder="Full name") }}
+                    {{ form.captain_name(class="form-control" + (" is-invalid" if form.captain_name.errors else "")) }}
                     {% for e in form.captain_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Submit -->
     <div class="d-flex gap-3 justify-content-end mb-4">
-        <a href="{{ url_for('admin.vessels') }}" class="btn-iara-secondary">Cancel</a>
+        <a href="{{ url_for('admin.vessel_details', vessel_id=vessel.id) }}" class="btn-iara-secondary">Cancel</a>
         <button type="submit" class="btn-iara-primary">
-            <i class="bi bi-check2-circle"></i> Register Vessel
+            <i class="bi bi-check2-circle"></i> Save Changes
         </button>
     </div>
 </form>

@@ -1,14 +1,15 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import (
     StringField, PasswordField, SubmitField,
-    SelectField, IntegerField, DateField,
+    SelectField, IntegerField, FloatField, DateField,
     BooleanField, TextAreaField, TelField
 )
 from wtforms.validators import (
     DataRequired, Email, Length, EqualTo,
     Optional, ValidationError, Regexp
 )
-from .models import PermitStatus, Vessel
+from .models import PermitStatus, VesselStatus, Vessel
 
 
 # ============================================================
@@ -128,15 +129,32 @@ class EditUserForm(FlaskForm):
 # ============================================================
 
 class VesselForm(FlaskForm):
-    international_number = StringField("International Number", validators=[DataRequired(), Length(max=50)])
-    call_sign            = StringField("Call Sign",            validators=[DataRequired(), Length(max=50)])
-    marking              = StringField("Vessel Marking",       validators=[DataRequired(), Length(max=50)])
-    length               = IntegerField("Length (m)",          validators=[DataRequired()])
-    width                = IntegerField("Width (m)",           validators=[DataRequired()])
-    engine_power         = IntegerField("Engine Power (HP)",   validators=[DataRequired()])
-    owner_name           = StringField("Owner Name",           validators=[DataRequired(), Length(max=100)])
-    captain_name         = StringField("Captain Name",         validators=[DataRequired(), Length(max=100)])
-    submit               = SubmitField("Save Vessel")
+    # ── Identity ───────────────────────────────────────────
+    international_number = StringField("International Number *", validators=[DataRequired(), Length(max=50)])
+    call_sign            = StringField("Call Sign *",            validators=[DataRequired(), Length(max=50)])
+    marking              = StringField("External Marking *",     validators=[DataRequired(), Length(max=50)])
+    name_bg              = StringField("Name (Bulgarian)",       validators=[Optional(), Length(max=150)])
+    name_en              = StringField("Name (English)",         validators=[Optional(), Length(max=150)])
+
+    # ── Registration ───────────────────────────────────────
+    port_registration = StringField("Port of Registration",   validators=[Optional(), Length(max=100)])
+    registration_date = DateField("Registration Date",        validators=[Optional()])
+    status            = SelectField("Status *",
+                            choices=[(s.value, s.value) for s in VesselStatus],
+                            validators=[DataRequired()])
+
+    # ── Dimensions ─────────────────────────────────────────
+    length        = FloatField("Length (m) *",      validators=[DataRequired()])
+    width         = FloatField("Width (m) *",       validators=[DataRequired()])
+    gross_tonnage = FloatField("Gross Tonnage (GT)", validators=[Optional()])
+    engine_power  = IntegerField("Engine Power (HP) *", validators=[DataRequired()])
+
+    # ── Ownership ──────────────────────────────────────────
+    owner_name   = StringField("Owner Name *",   validators=[DataRequired(), Length(max=100)])
+    owner_egn    = StringField("Owner EGN",      validators=[Optional(), Length(max=20)])
+    captain_name = StringField("Captain Name *", validators=[DataRequired(), Length(max=100)])
+
+    submit = SubmitField("Save Vessel")
 
 
 # ============================================================
@@ -166,3 +184,52 @@ class PermitForm(FlaskForm):
             (v.id, f"{v.international_number} — {v.call_sign}")
             for v in Vessel.query.all()
         ]
+
+
+# ============================================================
+# VESSEL DOCUMENT UPLOAD FORM
+# ============================================================
+
+class VesselDocumentUploadForm(FlaskForm):
+    doc_type = SelectField("Document Type", choices=[
+        ("Certificate",       "Certificate"),
+        ("Insurance",         "Insurance"),
+        ("Registration",      "Registration"),
+        ("Inspection Report", "Inspection Report"),
+        ("Other",             "Other"),
+    ], validators=[DataRequired()])
+    notes = TextAreaField("Notes", validators=[Optional(), Length(max=500)])
+    file  = FileField("File *", validators=[
+        FileRequired(),
+        FileAllowed(["pdf", "doc", "docx", "jpg", "jpeg", "png"],
+                    "Allowed: PDF, DOC, DOCX, JPG, PNG")
+    ])
+    submit = SubmitField("Upload Document")
+
+
+# ============================================================
+# VESSEL PHOTO UPLOAD FORM
+# ============================================================
+
+class VesselPhotoUploadForm(FlaskForm):
+    caption    = StringField("Caption", validators=[Optional(), Length(max=255)])
+    is_primary = BooleanField("Set as primary photo")
+    file       = FileField("Photo *", validators=[
+        FileRequired(),
+        FileAllowed(["jpg", "jpeg", "png", "webp"], "Allowed: JPG, PNG, WEBP")
+    ])
+    submit = SubmitField("Upload Photo")
+
+
+# ============================================================
+# VESSEL OWNERSHIP HISTORY FORM
+# ============================================================
+
+class VesselOwnershipForm(FlaskForm):
+    owner_name = StringField("Owner Name *", validators=[DataRequired(), Length(max=100)])
+    owner_egn  = StringField("Owner EGN",    validators=[Optional(), Length(max=20)])
+    from_date  = DateField("From Date *",    validators=[DataRequired()])
+    to_date    = DateField("To Date",        validators=[Optional()])
+    notes      = TextAreaField("Notes",      validators=[Optional(), Length(max=500)])
+    submit     = SubmitField("Record Transfer")
+

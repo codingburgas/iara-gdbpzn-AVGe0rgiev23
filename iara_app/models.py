@@ -23,6 +23,12 @@ class ViolationSeverity(Enum):
     CRITICAL = "Critical"
 
 
+class VesselStatus(Enum):
+    ACTIVE = "Active"
+    SUSPENDED = "Suspended"
+    SCRAPPED = "Scrapped"
+
+
 # ============================================================
 # USER MODEL
 # ============================================================
@@ -90,18 +96,42 @@ class Vessel(db.Model):
     __tablename__ = "vessel"
 
     id = db.Column(db.Integer, primary_key=True)
-    international_number = db.Column(db.String(50), nullable=False)
-    call_sign = db.Column(db.String(50), nullable=False)
-    marking = db.Column(db.String(50), nullable=False)
-    length = db.Column(db.Integer, nullable=False)
-    width = db.Column(db.Integer, nullable=False)
-    engine_power = db.Column(db.Integer, nullable=False)
-    owner_name = db.Column(db.String(100), nullable=False)
+
+    # Identifiers
+    international_number = db.Column(db.String(50), nullable=False, unique=True)
+    call_sign            = db.Column(db.String(50), nullable=False)
+    marking              = db.Column(db.String(50), nullable=False)
+
+    # Names
+    name_bg = db.Column(db.String(150))
+    name_en = db.Column(db.String(150))
+
+    # Registration
+    port_registration = db.Column(db.String(100))
+    registration_date = db.Column(db.Date)
+    status = db.Column(db.String(20), nullable=False, default=VesselStatus.ACTIVE.value)
+
+    # Dimensions
+    length        = db.Column(db.Float, nullable=False)
+    width         = db.Column(db.Float, nullable=False)
+    gross_tonnage = db.Column(db.Float)
+    engine_power  = db.Column(db.Integer, nullable=False)
+
+    # Ownership
+    owner_name   = db.Column(db.String(100), nullable=False)
+    owner_egn    = db.Column(db.String(20))
     captain_name = db.Column(db.String(100), nullable=False)
 
-    permits = db.relationship("Permit", backref="vessel", lazy=True)
-    inspections = db.relationship("Inspection", backref="vessel", lazy=True)
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    permits              = db.relationship("Permit", backref="vessel", lazy=True)
+    inspections          = db.relationship("Inspection", backref="vessel", lazy=True)
     scheduled_inspections = db.relationship("ScheduledInspection", backref="vessel", lazy=True)
+    documents            = db.relationship("VesselDocument", backref="vessel", lazy=True, cascade="all, delete-orphan")
+    photos               = db.relationship("VesselPhoto", backref="vessel", lazy=True, cascade="all, delete-orphan")
+    ownership_history    = db.relationship("VesselOwnershipHistory", backref="vessel", lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Vessel {self.call_sign}>"
@@ -318,3 +348,80 @@ class AuditLog(db.Model):
 
     def __repr__(self) -> str:
         return f"<AuditLog {self.action} by user {self.user_id}>"
+
+
+# ============================================================
+# VESSEL DOCUMENT
+# ============================================================
+
+DOC_TYPE_CHOICES = [
+    ("Certificate",      "Certificate"),
+    ("Insurance",        "Insurance"),
+    ("Registration",     "Registration"),
+    ("Inspection Report","Inspection Report"),
+    ("Other",            "Other"),
+]
+
+class VesselDocument(db.Model):
+    __tablename__ = "vessel_document"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    vessel_id      = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    doc_type      = db.Column(db.String(50), nullable=False)
+    filename      = db.Column(db.String(255), nullable=False)   # stored UUID filename
+    original_name = db.Column(db.String(255), nullable=False)   # original upload name
+    notes         = db.Column(db.Text)
+    uploaded_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    uploader = db.relationship("User", foreign_keys=[uploaded_by_id])
+
+    def __repr__(self) -> str:
+        return f"<VesselDocument {self.original_name}>"
+
+
+# ============================================================
+# VESSEL PHOTO
+# ============================================================
+
+class VesselPhoto(db.Model):
+    __tablename__ = "vessel_photo"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    vessel_id      = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    filename    = db.Column(db.String(255), nullable=False)
+    caption     = db.Column(db.String(255))
+    is_primary  = db.Column(db.Boolean, default=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    uploader = db.relationship("User", foreign_keys=[uploaded_by_id])
+
+    def __repr__(self) -> str:
+        return f"<VesselPhoto {self.filename}>"
+
+
+# ============================================================
+# VESSEL OWNERSHIP HISTORY
+# ============================================================
+
+class VesselOwnershipHistory(db.Model):
+    __tablename__ = "vessel_ownership_history"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    vessel_id      = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=False)
+    recorded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    owner_name = db.Column(db.String(100), nullable=False)
+    owner_egn  = db.Column(db.String(20))
+    from_date  = db.Column(db.Date, nullable=False)
+    to_date    = db.Column(db.Date, nullable=True)
+    notes      = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    recorder = db.relationship("User", foreign_keys=[recorded_by_id])
+
+    def __repr__(self) -> str:
+        return f"<VesselOwnershipHistory vessel={self.vessel_id} owner={self.owner_name}>"
