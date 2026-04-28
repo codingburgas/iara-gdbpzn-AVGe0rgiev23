@@ -93,6 +93,21 @@
         <i class="bi bi-bar-chart-line"></i> Performance
       </a>
 
+      <div class="sidebar-section-label" style="margin-top:8px;">Lookup Data</div>
+
+      <a href="{{ url_for('lookup.species_list') }}"
+        class="sidebar-link {% if 'species' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-fish"></i> Species
+      </a>
+      <a href="{{ url_for('lookup.gear_list') }}"
+        class="sidebar-link {% if 'gear' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-link-45deg"></i> Gear Types
+      </a>
+      <a href="{{ url_for('lookup.violation_codes_list') }}"
+        class="sidebar-link {% if 'violation_code' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-exclamation-octagon"></i> Violation Codes
+      </a>
+
       <div class="sidebar-section-label" style="margin-top:8px;">System</div>
 
       <a href="{{ url_for('admin.admin_users') }}"

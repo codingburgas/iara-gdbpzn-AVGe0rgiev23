@@ -1,0 +1,123 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('lookup.species_list') }}" class="iara-btn iara-btn-secondary iara-btn-sm">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+  <h1 class="mb-0" style="font-size:1.4rem;font-weight:700;">{{ title }}</h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-xl-8">
+    <div class="iara-card p-4">
+
+      <form method="post" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {# ── Identity ──────────────────────────────────────── #}
+        <h6 class="mb-3" style="font-weight:700;color:var(--primary);">
+          <i class="bi bi-translate me-1"></i> Names
+        </h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <label class="form-label">{{ form.name_bg.label }}</label>
+            {{ form.name_bg(class="form-control" + (" is-invalid" if form.name_bg.errors else ""), id="name_bg") }}
+            {% for e in form.name_bg.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ form.name_en.label }}</label>
+            {{ form.name_en(class="form-control", id="name_en") }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ form.scientific_name.label }}</label>
+            {{ form.scientific_name(class="form-control", style="font-style:italic;", id="scientific_name") }}
+          </div>
+        </div>
+
+        <hr style="border-color:var(--border);">
+
+        {# ── Size Limits ──────────────────────────────────── #}
+        <h6 class="mb-3" style="font-weight:700;color:var(--primary);">
+          <i class="bi bi-rulers me-1"></i> Size Limits
+        </h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.min_size_cm.label }}</label>
+            <div class="input-group">
+              {{ form.min_size_cm(class="form-control", id="min_size_cm", placeholder="e.g. 45") }}
+              <span class="input-group-text">cm</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.max_size_cm.label }}</label>
+            <div class="input-group">
+              {{ form.max_size_cm(class="form-control", id="max_size_cm", placeholder="optional") }}
+              <span class="input-group-text">cm</span>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border-color:var(--border);">
+
+        {# ── Season ──────────────────────────────────────── #}
+        <h6 class="mb-3" style="font-weight:700;color:var(--primary);">
+          <i class="bi bi-calendar-range me-1"></i> Fishing Season
+        </h6>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.season_start.label }}</label>
+            {{ form.season_start(class="form-select", id="season_start") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.season_end.label }}</label>
+            {{ form.season_end(class="form-select", id="season_end") }}
+          </div>
+        </div>
+        <p class="text-muted mb-4" style="font-size:.8rem;">
+          Leave both blank if the species is permitted year-round.
+        </p>
+
+        <hr style="border-color:var(--border);">
+
+        {# ── Quota & Protection ───────────────────────────── #}
+        <h6 class="mb-3" style="font-weight:700;color:var(--primary);">
+          <i class="bi bi-shield-check me-1"></i> Quota & Protection
+        </h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.daily_limit_kg.label }}</label>
+            <div class="input-group">
+              {{ form.daily_limit_kg(class="form-control", id="daily_limit_kg", placeholder="blank = unlimited") }}
+              <span class="input-group-text">kg / day</span>
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check form-switch ms-2">
+              {{ form.is_protected(class="form-check-input", id="is_protected", style="width:2.5rem;height:1.3rem;") }}
+              <label class="form-check-label ms-2 fw-600" for="is_protected">
+                {{ form.is_protected.label.text }}
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border-color:var(--border);">
+
+        {# ── Notes ───────────────────────────────────────── #}
+        <div class="mb-4">
+          <label class="form-label">{{ form.notes.label }}</label>
+          {{ form.notes(class="form-control", rows=4, id="notes", placeholder="Seasonal notes, legal references…") }}
+        </div>
+
+        <div class="d-flex gap-2">
+          {{ form.submit(class="iara-btn iara-btn-primary") }}
+          <a href="{{ url_for('lookup.species_list') }}" class="iara-btn iara-btn-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

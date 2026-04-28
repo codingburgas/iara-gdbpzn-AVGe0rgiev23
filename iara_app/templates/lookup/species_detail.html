@@ -1,0 +1,132 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('lookup.species_list') }}" class="iara-btn iara-btn-secondary iara-btn-sm">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+  <h1 class="mb-0" style="font-size:1.4rem;font-weight:700;">{{ sp.name_bg }}</h1>
+  {% if sp.is_protected %}
+  <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:.8rem;">🛡 Protected</span>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+
+  {# ── Identity Card ──────────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="iara-card h-100 p-4">
+      <h6 class="mb-3" style="font-weight:700;color:var(--primary);">
+        <i class="bi bi-info-circle me-1"></i> Identity
+      </h6>
+      <table class="w-100" style="font-size:.9rem;border-collapse:collapse;">
+        {% macro row(label, value) %}
+        <tr>
+          <td style="padding:8px 0;color:var(--text-secondary);width:45%;font-weight:500;">{{ label }}</td>
+          <td style="padding:8px 0;font-weight:600;">{{ value if value else '—' }}</td>
+        </tr>
+        {% endmacro %}
+        {{ row("Bulgarian Name", sp.name_bg) }}
+        {{ row("English Name", sp.name_en) }}
+        <tr>
+          <td style="padding:8px 0;color:var(--text-secondary);font-weight:500;">Scientific Name</td>
+          <td style="padding:8px 0;font-weight:600;font-style:italic;">{{ sp.scientific_name or '—' }}</td>
+        </tr>
+        {{ row("Protection Status", "🛡 Fully Protected" if sp.is_protected else "Open for fishing") }}
+      </table>
+    </div>
+  </div>
+
+  {# ── Regulations Card ──────────────────────────────────── #}
+  <div class="col-lg-6">
+    <div class="iara-card h-100 p-4">
+      <h6 class="mb-3" style="font-weight:700;color:var(--primary);">
+        <i class="bi bi-rulers me-1"></i> Fishing Regulations
+      </h6>
+      <table class="w-100" style="font-size:.9rem;border-collapse:collapse;">
+        {% macro reg_row(label, value) %}
+        <tr>
+          <td style="padding:8px 0;color:var(--text-secondary);width:50%;font-weight:500;">{{ label }}</td>
+          <td style="padding:8px 0;font-weight:600;">{{ value if value else '—' }}</td>
+        </tr>
+        {% endmacro %}
+        {{ reg_row("Minimum Catch Size", sp.min_size_cm ~ " cm" if sp.min_size_cm else none) }}
+        {{ reg_row("Maximum Size Limit", sp.max_size_cm ~ " cm" if sp.max_size_cm else none) }}
+        {{ reg_row("Season Start", sp.season_start) }}
+        {{ reg_row("Season End",   sp.season_end) }}
+        {{ reg_row("Daily Limit",  sp.daily_limit_kg ~ " kg / fisher" if sp.daily_limit_kg else "Unlimited") }}
+      </table>
+    </div>
+  </div>
+
+  {# ── Notes ──────────────────────────────────────────────── #}
+  {% if sp.notes %}
+  <div class="col-12">
+    <div class="iara-card p-4">
+      <h6 class="mb-2" style="font-weight:700;color:var(--primary);">
+        <i class="bi bi-journal-text me-1"></i> Notes
+      </h6>
+      <p style="font-size:.9rem;margin:0;white-space:pre-line;">{{ sp.notes }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Metadata ──────────────────────────────────────────── #}
+  <div class="col-12">
+    <div class="iara-card p-3" style="background:var(--surface-2);">
+      <span style="font-size:.8rem;color:var(--text-secondary);">
+        <i class="bi bi-clock me-1"></i>
+        Added {{ sp.created_at.strftime('%d %b %Y') }}
+        {% if sp.updated_at and sp.updated_at != sp.created_at %}
+        &nbsp;·&nbsp; Last updated {{ sp.updated_at.strftime('%d %b %Y') }}
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+</div>
+
+{# ── Actions ───────────────────────────────────────────────────────── #}
+<div class="d-flex gap-2 mt-4">
+  <a href="{{ url_for('lookup.species_edit', species_id=sp.id) }}" class="iara-btn iara-btn-primary">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  <button type="button" class="iara-btn iara-btn-danger"
+    onclick="confirmDelete({{ sp.id }}, '{{ sp.name_bg|replace("'", "\\'") }}')">
+    <i class="bi bi-trash"></i> Delete
+  </button>
+</div>
+
+{# ── Delete Modal ───────────────────────────────────────────────────── #}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:1px solid var(--border);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Delete Species</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Permanently delete <strong id="delSpeciesName"></strong>?</p>
+        <p class="text-muted" style="font-size:.85rem;">This cannot be undone.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="iara-btn iara-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="delForm" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="iara-btn iara-btn-danger"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function confirmDelete(id, name) {
+  document.getElementById('delSpeciesName').textContent = name;
+  document.getElementById('delForm').action = '/admin/lookup/species/' + id + '/delete';
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

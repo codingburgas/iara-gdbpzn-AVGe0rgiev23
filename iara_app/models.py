@@ -210,10 +210,78 @@ class ViolationCode(db.Model):
         default=ViolationSeverity.MEDIUM.value
     )
 
+    # Legal reference & fine — added in Lookup Data module
+    law_article     = db.Column(db.String(100), nullable=True)   # e.g. "Art. 34 ZRR"
+    default_penalty = db.Column(db.Numeric(10, 2), nullable=True)  # EUR
+
     violations = db.relationship("Violation", backref="violation_code", lazy=True)
 
     def __repr__(self) -> str:
         return f"<ViolationCode {self.code}>"
+
+
+# ============================================================
+# SPECIES
+# ============================================================
+
+class Species(db.Model):
+    """Reference table for fish & marine species subject to IARA regulation."""
+    __tablename__ = "species"
+
+    id              = db.Column(db.Integer, primary_key=True)
+
+    # Names
+    name_bg         = db.Column(db.String(150), nullable=False, unique=True)  # BG common name
+    name_en         = db.Column(db.String(150), nullable=True)
+    scientific_name = db.Column(db.String(200), nullable=True)
+
+    # Size limits (cm)
+    min_size_cm     = db.Column(db.Float, nullable=True)  # minimum legal catch size
+    max_size_cm     = db.Column(db.Float, nullable=True)  # optional upper limit
+
+    # Fishing season — stored as 'MM-DD' strings (e.g. '01-04')
+    season_start    = db.Column(db.String(10), nullable=True)  # None = year-round
+    season_end      = db.Column(db.String(10), nullable=True)
+
+    # Quotas
+    daily_limit_kg  = db.Column(db.Float, nullable=True)  # per fisher per day, None = unlimited
+
+    # Protection flag
+    is_protected    = db.Column(db.Boolean, nullable=False, default=False)
+
+    notes           = db.Column(db.Text, nullable=True)
+
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at      = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<Species {self.name_bg}>"
+
+
+# ============================================================
+# GEAR TYPE
+# ============================================================
+
+class GearType(db.Model):
+    """Reference table for fishing gear types used in inspections and violation records."""
+    __tablename__ = "gear_type"
+
+    id                  = db.Column(db.Integer, primary_key=True)
+
+    code                = db.Column(db.String(20), nullable=False, unique=True)  # FAO/EU code e.g. 'TBB'
+    name                = db.Column(db.String(150), nullable=False)  # human-readable name
+    description         = db.Column(db.Text, nullable=True)
+
+    mesh_size_required  = db.Column(db.Boolean, nullable=False, default=False)
+    min_mesh_size_mm    = db.Column(db.Float, nullable=True)
+
+    is_legal            = db.Column(db.Boolean, nullable=False, default=True)
+
+    created_at          = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at          = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<GearType {self.code}>"
 
 
 # ============================================================

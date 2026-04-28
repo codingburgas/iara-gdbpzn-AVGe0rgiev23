@@ -1,0 +1,309 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap">
+  <h1 class="mb-0" style="font-size:1.6rem;font-weight:700;">⚖️ Violation Codes</h1>
+  <div class="d-flex gap-2">
+    <span class="iara-stat-chip">{{ codes|length }} codes</span>
+    <span class="iara-stat-chip">{{ categories|length }} categories</span>
+  </div>
+</div>
+
+{# ── Tabs ──────────────────────────────────────────────────────────── #}
+<ul class="nav nav-tabs mb-4" id="violationTabs" role="tablist" style="border-bottom:2px solid var(--border);">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'codes' %}active{% endif %}"
+       href="{{ url_for('lookup.violation_codes_list', tab='codes') }}"
+       style="font-weight:600;">
+      <i class="bi bi-list-check me-1"></i> Violation Codes
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'categories' %}active{% endif %}"
+       href="{{ url_for('lookup.violation_codes_list', tab='categories') }}"
+       style="font-weight:600;">
+      <i class="bi bi-collection me-1"></i> Categories
+    </a>
+  </li>
+</ul>
+
+{# ══════════════════════════════════════════════════════════════════════
+   CODES TAB
+══════════════════════════════════════════════════════════════════════ #}
+{% if tab == 'codes' %}
+
+<div class="d-flex justify-content-end mb-3">
+  <button class="iara-btn iara-btn-primary" data-bs-toggle="modal" data-bs-target="#addCodeModal">
+    <i class="bi bi-plus-lg"></i> Add Violation Code
+  </button>
+</div>
+
+{% if codes %}
+<div class="iara-card overflow-hidden">
+  <div class="table-responsive">
+    <table class="iara-table">
+      <thead>
+        <tr>
+          <th style="width:90px;">Code</th>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Severity</th>
+          <th>Law Article</th>
+          <th>Penalty (EUR)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vc in codes %}
+        {% set sev_color = {
+          'Low':      ('background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;'),
+          'Medium':   ('background:#fffbeb;color:#b45309;border:1px solid #fde68a;'),
+          'High':     ('background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;'),
+          'Critical': ('background:#fef2f2;color:#991b1b;border:1px solid #fecaca;')
+        }.get(vc.default_severity, '') %}
+        <tr>
+          <td>
+            <span class="badge" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);font-family:monospace;">
+              {{ vc.code }}
+            </span>
+          </td>
+          <td style="font-weight:600;">
+            {{ vc.title }}
+            {% if vc.description %}
+            <br><small style="color:var(--text-secondary);font-weight:400;">{{ vc.description[:60] }}{% if vc.description|length > 60 %}…{% endif %}</small>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge" style="background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border);">
+              {{ vc.category.name }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" style="{{ sev_color }}">{{ vc.default_severity }}</span>
+          </td>
+          <td style="font-size:.82rem;color:var(--text-secondary);">{{ vc.law_article or '—' }}</td>
+          <td style="font-weight:600;">
+            {% if vc.default_penalty %}€{{ "%.2f"|format(vc.default_penalty) }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('lookup.violation_code_edit', code_id=vc.id) }}"
+               class="iara-btn iara-btn-secondary iara-btn-sm me-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <button type="button"
+              class="iara-btn iara-btn-danger iara-btn-sm"
+              onclick="confirmDeleteCode({{ vc.id }}, '{{ vc.code }}')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="iara-card p-5 text-center">
+  <i class="bi bi-list-check" style="font-size:3rem;color:var(--text-secondary);"></i>
+  <p class="mt-3 text-muted">No violation codes defined.</p>
+</div>
+{% endif %}
+
+{# ── Add Code Modal ──────────────────────────────────────────────── #}
+<div class="modal fade" id="addCodeModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:1px solid var(--border);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Add Violation Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('lookup.violation_code_add') }}" novalidate>
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">{{ code_form.code.label }}</label>
+              {{ code_form.code(class="form-control font-monospace", id="code_code",
+                 placeholder="V-010", style="text-transform:uppercase;") }}
+            </div>
+            <div class="col-md-9">
+              <label class="form-label">{{ code_form.title.label }}</label>
+              {{ code_form.title(class="form-control", id="code_title", placeholder="Short title…") }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ code_form.description.label }}</label>
+              {{ code_form.description(class="form-control", rows=2, id="code_desc") }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ code_form.category_id.label }}</label>
+              {{ code_form.category_id(class="form-select", id="code_category") }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ code_form.default_severity.label }}</label>
+              {{ code_form.default_severity(class="form-select", id="code_severity") }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ code_form.law_article.label }}</label>
+              {{ code_form.law_article(class="form-control", id="code_law", placeholder="Art. 34 ZRR") }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ code_form.default_penalty.label }}</label>
+              <div class="input-group">
+                <span class="input-group-text">€</span>
+                {{ code_form.default_penalty(class="form-control", id="code_penalty", placeholder="0.00") }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="iara-btn iara-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          {{ code_form.submit(class="iara-btn iara-btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Delete Code Modal ───────────────────────────────────────────── #}
+<div class="modal fade" id="deleteCodeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:1px solid var(--border);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Delete Violation Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Delete code <strong id="deleteCodeName"></strong>?</p>
+        <p class="text-muted" style="font-size:.85rem;">Codes referenced by existing violations cannot be deleted.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="iara-btn iara-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteCodeForm" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="iara-btn iara-btn-danger"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════
+   CATEGORIES TAB
+══════════════════════════════════════════════════════════════════════ #}
+{% elif tab == 'categories' %}
+
+<div class="d-flex justify-content-end mb-3">
+  <button class="iara-btn iara-btn-primary" data-bs-toggle="modal" data-bs-target="#addCatModal">
+    <i class="bi bi-plus-lg"></i> Add Category
+  </button>
+</div>
+
+{% if categories %}
+<div class="iara-card overflow-hidden">
+  <div class="table-responsive">
+    <table class="iara-table">
+      <thead>
+        <tr>
+          <th>Category Name</th>
+          <th>Codes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+        <tr>
+          <td style="font-weight:600;">{{ cat.name }}</td>
+          <td>
+            <span class="badge" style="background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border);">
+              {{ cat.codes|length }}
+            </span>
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('lookup.violation_category_edit', cat_id=cat.id) }}"
+               class="iara-btn iara-btn-secondary iara-btn-sm me-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <button type="button"
+              class="iara-btn iara-btn-danger iara-btn-sm"
+              onclick="confirmDeleteCat({{ cat.id }}, '{{ cat.name|replace("'", "\\'") }}')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="iara-card p-5 text-center">
+  <i class="bi bi-collection" style="font-size:3rem;color:var(--text-secondary);"></i>
+  <p class="mt-3 text-muted">No categories yet.</p>
+</div>
+{% endif %}
+
+{# ── Add Category Modal ──────────────────────────────────────────── #}
+<div class="modal fade" id="addCatModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:1px solid var(--border);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Add Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('lookup.violation_category_add') }}" novalidate>
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="form-label">{{ cat_form.name.label }}</label>
+          {{ cat_form.name(class="form-control", id="cat_name", placeholder="e.g. Environmental") }}
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="iara-btn iara-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          {{ cat_form.submit(class="iara-btn iara-btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Delete Category Modal ───────────────────────────────────────── #}
+<div class="modal fade" id="deleteCatModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:1px solid var(--border);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Delete Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Delete category <strong id="deleteCatName"></strong>?</p>
+        <p class="text-muted" style="font-size:.85rem;">Categories with assigned codes cannot be deleted.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="iara-btn iara-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteCatForm" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="iara-btn iara-btn-danger"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function confirmDeleteCode(id, code) {
+  document.getElementById('deleteCodeName').textContent = code;
+  document.getElementById('deleteCodeForm').action = '/admin/lookup/violations/codes/' + id + '/delete';
+  new bootstrap.Modal(document.getElementById('deleteCodeModal')).show();
+}
+function confirmDeleteCat(id, name) {
+  document.getElementById('deleteCatName').textContent = name;
+  document.getElementById('deleteCatForm').action = '/admin/lookup/violations/categories/' + id + '/delete';
+  new bootstrap.Modal(document.getElementById('deleteCatModal')).show();
+}
+</script>
+{% endblock %}

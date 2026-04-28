@@ -9,7 +9,7 @@ from wtforms.validators import (
     DataRequired, Email, Length, EqualTo,
     Optional, ValidationError, Regexp
 )
-from .models import PermitStatus, VesselStatus, Vessel
+from .models import PermitStatus, VesselStatus, Vessel, ViolationCategory, ViolationSeverity
 
 
 # ============================================================
@@ -28,8 +28,8 @@ class RegistrationForm(FlaskForm):
     last_name = StringField("Last Name", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired(), Email()])
     phone = StringField("Phone", validators=[DataRequired()])
-    id_number = StringField("ID Number", validators=[DataRequired()])  # ADD THIS
-    age_category = SelectField(  # ADD THIS
+    id_number = StringField("ID Number", validators=[DataRequired()])
+    age_category = SelectField(
         "Age Category",
         choices=[
             ("Adult", "Adult"),
@@ -233,3 +233,83 @@ class VesselOwnershipForm(FlaskForm):
     notes      = TextAreaField("Notes",      validators=[Optional(), Length(max=500)])
     submit     = SubmitField("Record Transfer")
 
+
+# ============================================================
+# LOOKUP DATA FORMS
+# ============================================================
+
+SEASON_MONTH_DAYS = [
+    ("", "— select —"),
+    ("01-01", "01 Jan"), ("01-02", "01 Feb"), ("01-03", "01 Mar"),
+    ("01-04", "01 Apr"), ("01-05", "01 May"), ("01-06", "01 Jun"),
+    ("01-07", "01 Jul"), ("01-08", "01 Aug"), ("01-09", "01 Sep"),
+    ("01-10", "01 Oct"), ("01-11", "01 Nov"), ("01-12", "01 Dec"),
+    ("15-01", "15 Jan"), ("15-02", "15 Feb"), ("15-03", "15 Mar"),
+    ("15-04", "15 Apr"), ("15-05", "15 May"), ("15-06", "15 Jun"),
+    ("15-07", "15 Jul"), ("15-08", "15 Aug"), ("15-09", "15 Sep"),
+    ("15-10", "15 Oct"), ("15-11", "15 Nov"), ("15-12", "15 Dec"),
+    ("31-01", "31 Jan"), ("28-02", "28 Feb"), ("31-03", "31 Mar"),
+    ("30-04", "30 Apr"), ("31-05", "31 May"), ("30-06", "30 Jun"),
+    ("31-07", "31 Jul"), ("31-08", "31 Aug"), ("30-09", "30 Sep"),
+    ("31-10", "31 Oct"), ("30-11", "30 Nov"), ("31-12", "31 Dec"),
+]
+
+
+class SpeciesForm(FlaskForm):
+    name_bg         = StringField("Bulgarian Name *",   validators=[DataRequired(), Length(max=150)])
+    name_en         = StringField("English Name",       validators=[Optional(), Length(max=150)])
+    scientific_name = StringField("Scientific Name",    validators=[Optional(), Length(max=200)])
+
+    min_size_cm     = FloatField("Min Size (cm)",       validators=[Optional()])
+    max_size_cm     = FloatField("Max Size (cm)",       validators=[Optional()])
+
+    season_start    = SelectField("Season Start",       choices=SEASON_MONTH_DAYS, validators=[Optional()])
+    season_end      = SelectField("Season End",         choices=SEASON_MONTH_DAYS, validators=[Optional()])
+
+    daily_limit_kg  = FloatField("Daily Limit (kg)",    validators=[Optional()])
+    is_protected    = BooleanField("Fully Protected Species")
+    notes           = TextAreaField("Notes",            validators=[Optional(), Length(max=2000)])
+    submit          = SubmitField("Save Species")
+
+
+class GearTypeForm(FlaskForm):
+    code               = StringField("Gear Code *",          validators=[DataRequired(), Length(max=20)])
+    name               = StringField("Gear Name *",          validators=[DataRequired(), Length(max=150)])
+    description        = TextAreaField("Description",         validators=[Optional(), Length(max=2000)])
+    mesh_size_required = BooleanField("Mesh Size Declaration Required")
+    min_mesh_size_mm   = FloatField("Min Mesh Size (mm)",     validators=[Optional()])
+    is_legal           = BooleanField("Legal / Permitted Gear", default=True)
+    submit             = SubmitField("Save Gear Type")
+
+
+class ViolationCategoryForm(FlaskForm):
+    name   = StringField("Category Name *", validators=[DataRequired(), Length(max=100)])
+    submit = SubmitField("Save Category")
+
+
+class ViolationCodeForm(FlaskForm):
+    code            = StringField("Code *",              validators=[DataRequired(), Length(max=20)])
+    title           = StringField("Title *",             validators=[DataRequired(), Length(max=255)])
+    description     = TextAreaField("Description",       validators=[Optional()])
+    category_id     = SelectField("Category *",          coerce=int, validators=[DataRequired()])
+    default_severity = SelectField(
+        "Default Severity *",
+        choices=[(s.value, s.value) for s in ViolationSeverity],
+        validators=[DataRequired()]
+    )
+    law_article     = StringField("Law Article",         validators=[Optional(), Length(max=100)])
+    default_penalty = FloatField("Default Penalty (EUR)", validators=[Optional()])
+    submit          = SubmitField("Save Violation Code")
+
+    def set_category_choices(self):
+        self.category_id.choices = [
+            (c.id, c.name) for c in ViolationCategory.query.order_by(ViolationCategory.name).all()
+        ]
+
+
+class SpeciesCSVImportForm(FlaskForm):
+    csv_file = FileField("CSV File *", validators=[
+        FileRequired(),
+        FileAllowed(["csv"], "Only .csv files are accepted.")
+    ])
+    submit = SubmitField("Import Species")

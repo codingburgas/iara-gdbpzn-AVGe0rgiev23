@@ -10,6 +10,7 @@ from .admin import bp as admin_bp
 from .inspector import bp as inspector_bp
 from .fisherman import bp as fisherman_bp
 from .public import bp as public_bp
+from .lookup import bp as lookup_bp
 
 
 def register_blueprints(app):
@@ -19,3 +20,4 @@ def register_blueprints(app):
     app.register_blueprint(inspector_bp)
     app.register_blueprint(fisherman_bp)
     app.register_blueprint(public_bp)
+    app.register_blueprint(lookup_bp)
