@@ -132,6 +132,7 @@ class Vessel(db.Model):
     documents            = db.relationship("VesselDocument", backref="vessel", lazy=True, cascade="all, delete-orphan")
     photos               = db.relationship("VesselPhoto", backref="vessel", lazy=True, cascade="all, delete-orphan")
     ownership_history    = db.relationship("VesselOwnershipHistory", backref="vessel", lazy=True, cascade="all, delete-orphan")
+    fishing_trips        = db.relationship("FishingTrip", backref="vessel", lazy=True)
 
     def __repr__(self) -> str:
         return f"<Vessel {self.call_sign}>"
@@ -493,3 +494,100 @@ class VesselOwnershipHistory(db.Model):
 
     def __repr__(self) -> str:
         return f"<VesselOwnershipHistory vessel={self.vessel_id} owner={self.owner_name}>"
+
+
+# ============================================================
+# FISHING TRIP
+# ============================================================
+
+class TripStatus(Enum):
+    ACTIVE    = "active"
+    COMPLETED = "completed"
+
+
+class FishingTrip(db.Model):
+    """One fishing trip entry in the catch logbook."""
+    __tablename__ = "fishing_trip"
+
+    id             = db.Column(db.Integer, primary_key=True)
+
+    # Who & which vessel
+    fisherman_id   = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    vessel_id      = db.Column(db.Integer, db.ForeignKey("vessel.id"), nullable=True)
+
+    # Time
+    start_datetime = db.Column(db.DateTime, nullable=False)
+    end_datetime   = db.Column(db.DateTime, nullable=True)   # set when trip ends
+
+    # Location & conditions
+    location       = db.Column(db.String(255), nullable=True)
+    weather        = db.Column(db.String(100), nullable=True)  # e.g. "Calm / 3 Bft"
+    fuel_liters    = db.Column(db.Float, nullable=True)
+
+    notes          = db.Column(db.Text, nullable=True)
+    status         = db.Column(db.String(20), nullable=False, default=TripStatus.ACTIVE.value)
+
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    fisherman      = db.relationship("User", foreign_keys=[fisherman_id], backref="fishing_trips")
+    catch_records  = db.relationship("CatchRecord", backref="trip", lazy=True,
+                                      cascade="all, delete-orphan")
+
+    @property
+    def total_weight_kg(self):
+        return sum(r.weight_kg for r in self.catch_records if r.weight_kg)
+
+    @property
+    def total_quantity(self):
+        return sum(r.quantity for r in self.catch_records if r.quantity)
+
+    @property
+    def duration_hours(self):
+        if self.end_datetime and self.start_datetime:
+            delta = self.end_datetime - self.start_datetime
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+    def __repr__(self) -> str:
+        return f"<FishingTrip {self.id} by user {self.fisherman_id}>"
+
+
+# ============================================================
+# CATCH RECORD
+# ============================================================
+
+class CatchRecord(db.Model):
+    """One species catch entry within a fishing trip."""
+    __tablename__ = "catch_record"
+
+    id                = db.Column(db.Integer, primary_key=True)
+    trip_id           = db.Column(db.Integer, db.ForeignKey("fishing_trip.id"), nullable=False)
+
+    # Species — FK preferred, free-text fallback
+    species_id        = db.Column(db.Integer, db.ForeignKey("species.id"), nullable=True)
+    species_name_free = db.Column(db.String(150), nullable=True)  # if not in species table
+
+    # Catch details
+    quantity          = db.Column(db.Integer, nullable=False, default=1)
+    weight_kg         = db.Column(db.Float, nullable=False)
+    size_cm           = db.Column(db.Float, nullable=True)  # average/representative size
+
+    # Gear
+    gear_type_id      = db.Column(db.Integer, db.ForeignKey("gear_type.id"), nullable=True)
+
+    notes             = db.Column(db.Text, nullable=True)
+    created_at        = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    species   = db.relationship("Species",  foreign_keys=[species_id],  backref="catch_records")
+    gear_type = db.relationship("GearType", foreign_keys=[gear_type_id], backref="catch_records")
+
+    @property
+    def display_species(self):
+        if self.species:
+            return self.species.name_bg
+        return self.species_name_free or "Unknown"
+
+    def __repr__(self) -> str:
+        return f"<CatchRecord trip={self.trip_id} species={self.display_species} {self.weight_kg}kg>"

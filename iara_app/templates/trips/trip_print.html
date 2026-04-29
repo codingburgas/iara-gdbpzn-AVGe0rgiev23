@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip #{{ trip.id }} — Catch Summary | IARA</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 12pt;
+      color: #1a1a2e;
+      background: #fff;
+      padding: 20mm 15mm;
+    }
+    /* Header */
+    .print-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid #1e3a5f;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .print-brand { font-size: 22pt; font-weight: 800; color: #1e3a5f; }
+    .print-brand span { font-size: 10pt; font-weight: 400; color: #666; display: block; }
+    .print-meta { text-align: right; font-size: 9pt; color: #555; }
+    /* Title */
+    h1 {
+      font-size: 16pt;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #1e3a5f;
+    }
+    h2 {
+      font-size: 12pt;
+      font-weight: 600;
+      margin: 16px 0 8px;
+      color: #1e3a5f;
+      border-bottom: 1px solid #dde;
+      padding-bottom: 4px;
+    }
+    /* Info grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 20px;
+      margin-bottom: 12px;
+    }
+    .info-row { display: flex; gap: 8px; font-size: 10pt; }
+    .info-label { color: #666; min-width: 110px; }
+    .info-value { font-weight: 600; }
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+      margin-bottom: 12px;
+    }
+    thead th {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) { background: #f4f6fb; }
+    tbody td { padding: 5px 8px; border-bottom: 1px solid #e0e5f0; }
+    tfoot td {
+      background: #e8ecf5;
+      padding: 6px 8px;
+      font-weight: 700;
+      border-top: 2px solid #1e3a5f;
+    }
+    /* Badges */
+    .badge-protected { color: #dc2626; font-weight: 700; }
+    .badge-undersized { color: #d97706; font-weight: 700; }
+    /* Totals summary box */
+    .totals-box {
+      display: flex;
+      gap: 24px;
+      background: #f4f6fb;
+      border: 1px solid #dde;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+    }
+    .total-item { text-align: center; }
+    .total-value { font-size: 18pt; font-weight: 800; color: #1e3a5f; }
+    .total-label { font-size: 8pt; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    /* Status */
+    .status-active    { color: #15803d; font-weight: 700; }
+    .status-completed { color: #1d4ed8; font-weight: 700; }
+    /* Footer */
+    .print-footer {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #dde;
+      font-size: 8pt;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+    }
+    /* Signatures */
+    .sig-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 24px;
+    }
+    .sig-line {
+      border-top: 1px solid #333;
+      padding-top: 4px;
+      font-size: 9pt;
+      color: #555;
+    }
+    @media print {
+      body { padding: 10mm; }
+      @page { margin: 10mm; }
+    }
+    .no-print { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Print button (hidden when actually printing) -->
+  <div style="text-align:right;margin-bottom:12px;" class="no-print" id="print-controls">
+    <button onclick="window.print()"
+      style="padding:8px 18px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+      🖨️ Print / Save as PDF
+    </button>
+    <button onclick="window.history.back()"
+      style="padding:8px 18px;background:#f1f5f9;color:#333;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-size:12px;margin-left:6px;">
+      ← Back
+    </button>
+  </div>
+
+  <!-- IARA Header -->
+  <div class="print-header">
+    <div>
+      <div class="print-brand">
+        🌊 IARA
+        <span>Inspectorate for Aquatic Resources and Fishing Activities</span>
+      </div>
+    </div>
+    <div class="print-meta">
+      <strong>OFFICIAL CATCH LOGBOOK</strong><br>
+      Document No.: TRIP-{{ trip.id }}<br>
+      Printed: {{ printed_at.strftime('%d %b %Y %H:%M') }}
+    </div>
+  </div>
+
+  <h1>Fishing Trip Summary — #{{ trip.id }}</h1>
+  <p style="color:#555;font-size:10pt;margin-bottom:12px;">
+    Status:
+    {% if trip.status == 'active' %}
+      <span class="status-active">● ACTIVE (in progress)</span>
+    {% else %}
+      <span class="status-completed">✓ COMPLETED</span>
+    {% endif %}
+  </p>
+
+  <!-- Trip Info -->
+  <h2>Trip Details</h2>
+  <div class="info-grid">
+    <div class="info-row">
+      <span class="info-label">Fisherman:</span>
+      <span class="info-value">{{ trip.fisherman.first_name }} {{ trip.fisherman.last_name }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Vessel:</span>
+      <span class="info-value">
+        {% if trip.vessel %}{{ trip.vessel.international_number }} — {{ trip.vessel.name_bg or trip.vessel.call_sign }}
+        {% else %}N/A{% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Departure:</span>
+      <span class="info-value">{{ trip.start_datetime.strftime('%d %b %Y %H:%M') }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Return:</span>
+      <span class="info-value">
+        {% if trip.end_datetime %}{{ trip.end_datetime.strftime('%d %b %Y %H:%M') }}{% else %}—{% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Duration:</span>
+      <span class="info-value">{{ trip.duration_hours ~ ' hours' if trip.duration_hours else '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Location:</span>
+      <span class="info-value">{{ trip.location or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Weather:</span>
+      <span class="info-value">{{ trip.weather or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Fuel Loaded:</span>
+      <span class="info-value">{{ (trip.fuel_liters ~ ' L') if trip.fuel_liters else '—' }}</span>
+    </div>
+  </div>
+  {% if trip.notes %}
+  <p style="font-size:10pt;color:#444;margin-bottom:12px;">
+    <strong>Notes:</strong> {{ trip.notes }}
+  </p>
+  {% endif %}
+
+  <!-- Catch Summary -->
+  <div class="totals-box">
+    <div class="total-item">
+      <div class="total-value">{{ trip.catch_records|length }}</div>
+      <div class="total-label">Species Entries</div>
+    </div>
+    <div class="total-item">
+      <div class="total-value">{{ total_qty }}</div>
+      <div class="total-label">Total Fish</div>
+    </div>
+    <div class="total-item">
+      <div class="total-value">{{ "%.2f"|format(total_weight) }} kg</div>
+      <div class="total-label">Total Weight</div>
+    </div>
+  </div>
+
+  <!-- Catch Table -->
+  <h2>Catch Records</h2>
+  {% if trip.catch_records %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Species (BG)</th>
+        <th>Scientific Name</th>
+        <th>Quantity</th>
+        <th>Weight (kg)</th>
+        <th>Avg Size (cm)</th>
+        <th>Gear</th>
+        <th>Flags</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rec in trip.catch_records %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td><strong>{{ rec.display_species }}</strong></td>
+        <td>
+          {% if rec.species and rec.species.scientific_name %}
+            <em>{{ rec.species.scientific_name }}</em>
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ rec.quantity }}</td>
+        <td>{{ "%.3f"|format(rec.weight_kg) }}</td>
+        <td>{{ rec.size_cm or '—' }}</td>
+        <td>{{ rec.gear_type.name if rec.gear_type else '—' }}</td>
+        <td>
+          {% if rec.species and rec.species.is_protected %}
+            <span class="badge-protected">⚠ PROTECTED</span>
+          {% endif %}
+          {% if rec.species and rec.species.min_size_cm and rec.size_cm and rec.size_cm < rec.species.min_size_cm %}
+            <span class="badge-undersized">UNDERSIZED</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><strong>TOTALS</strong></td>
+        <td><strong>{{ total_qty }}</strong></td>
+        <td><strong>{{ "%.3f"|format(total_weight) }}</strong></td>
+        <td colspan="3"></td>
+      </tr>
+    </tfoot>
+  </table>
+  {% else %}
+  <p style="color:#888;font-style:italic;">No catch records for this trip.</p>
+  {% endif %}
+
+  <!-- Signatures -->
+  <div class="sig-box">
+    <div>
+      <div class="sig-line">
+        Fisherman Signature: {{ trip.fisherman.first_name }} {{ trip.fisherman.last_name }}
+      </div>
+    </div>
+    <div>
+      <div class="sig-line">
+        Inspector / Authority Signature
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="print-footer">
+    <span>IARA Fisheries Authority — Official Document</span>
+    <span>Trip ID: {{ trip.id }} | Generated: {{ printed_at.strftime('%Y-%m-%d %H:%M') }}</span>
+  </div>
+
+  <script>
+    // Hide print controls when printing
+    window.addEventListener('beforeprint', () => {
+      document.getElementById('print-controls').style.display = 'none';
+    });
+    window.addEventListener('afterprint', () => {
+      document.getElementById('print-controls').style.display = '';
+    });
+  </script>
+
+</body>
+</html>

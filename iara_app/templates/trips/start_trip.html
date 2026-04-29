@@ -1,0 +1,118 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#0ea5e9,#2563eb);
+                  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">
+        ⚓
+      </div>
+      <div>
+        <h1 class="page-title mb-0">Start New Fishing Trip</h1>
+        <p class="text-muted mb-0 mt-1">Record your departure details and begin logging your catch.</p>
+      </div>
+    </div>
+
+    <div class="iara-card">
+      <div class="iara-card-header">
+        <i class="bi bi-play-circle me-2 text-success"></i>Trip Details
+      </div>
+      <div class="iara-card-body">
+        <form method="POST" action="{{ url_for('trips.start_trip') }}">
+          {{ form.hidden_tag() }}
+
+          <!-- Vessel -->
+          <div class="mb-3">
+            {{ form.vessel_id.label(class="form-label fw-semibold") }}
+            {{ form.vessel_id(class="form-select" + (" is-invalid" if form.vessel_id.errors else ""), id="vessel_id") }}
+            {% for e in form.vessel_id.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+            <div class="form-text">Select the vessel for this trip, or leave blank if not applicable.</div>
+          </div>
+
+          <!-- Departure datetime -->
+          <div class="mb-3">
+            {{ form.start_datetime.label(class="form-label fw-semibold") }}
+            {{ form.start_datetime(class="form-control" + (" is-invalid" if form.start_datetime.errors else ""), id="start_datetime") }}
+            {% for e in form.start_datetime.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Location -->
+          <div class="mb-3">
+            {{ form.location.label(class="form-label fw-semibold") }}
+            {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else ""),
+               placeholder="e.g. Port of Burgas, 42.4977° N, 27.4706° E", id="location") }}
+            {% for e in form.location.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Row: weather + fuel -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {{ form.weather.label(class="form-label fw-semibold") }}
+              {{ form.weather(class="form-control" + (" is-invalid" if form.weather.errors else ""),
+                 placeholder="e.g. Calm / 3 Beaufort", id="weather") }}
+              {% for e in form.weather.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.fuel_liters.label(class="form-label fw-semibold") }}
+              <div class="input-group">
+                {{ form.fuel_liters(class="form-control" + (" is-invalid" if form.fuel_liters.errors else ""),
+                   placeholder="0", id="fuel_liters") }}
+                <span class="input-group-text">L</span>
+              </div>
+              {% for e in form.fuel_liters.errors %}
+                <div class="invalid-feedback d-block">{{ e }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="mb-4">
+            {{ form.notes.label(class="form-label fw-semibold") }}
+            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""),
+               rows=3, placeholder="Any additional notes about this trip…", id="notes") }}
+            {% for e in form.notes.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('trips.trips_list') }}" class="iara-btn iara-btn-outline">Cancel</a>
+            {{ form.submit(class="iara-btn iara-btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Info box -->
+    <div class="iara-card mt-3" style="border-left:3px solid #3b82f6;">
+      <div class="iara-card-body py-3">
+        <div class="d-flex gap-2">
+          <i class="bi bi-info-circle text-primary mt-1"></i>
+          <div>
+            <p class="mb-1 fw-semibold">After starting your trip</p>
+            <p class="mb-0 text-muted small">
+              You can add individual catch records with species, weight, quantity and gear type.
+              End the trip when you return to port. Active trips appear in your logbook with an
+              <span class="iara-badge iara-badge-success">Active</span> badge.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{{ url_for('trips.trip_detail', trip_id=trip.id) }}"
+         class="iara-btn iara-btn-sm iara-btn-outline">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="page-title mb-0">Add Catch — Trip #{{ trip.id }}</h1>
+        <p class="text-muted mb-0 mt-1">
+          {{ trip.start_datetime.strftime('%d %b %Y') }}
+          {% if trip.location %} · {{ trip.location }}{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="iara-card">
+      <div class="iara-card-header">
+        <i class="bi bi-fish me-2 text-primary"></i>Catch Entry
+      </div>
+      <div class="iara-card-body">
+        <form method="POST" action="{{ url_for('trips.add_catch', trip_id=trip.id) }}" id="catch-form">
+          {{ form.hidden_tag() }}
+
+          <!-- Hidden species_id (set by autocomplete) -->
+          {{ form.species_id(id="species_id_hidden") }}
+
+          <!-- Species autocomplete -->
+          <div class="mb-3 position-relative">
+            {{ form.species_name_free.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              {{ form.species_name_free(
+                  class="form-control" + (" is-invalid" if form.species_name_free.errors else ""),
+                  id="species_search",
+                  autocomplete="off",
+                  placeholder="Type species name (BG, EN, or scientific)…"
+              ) }}
+              <button type="button" class="btn btn-outline-secondary" id="clear-species" title="Clear species">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+            <!-- Dropdown results -->
+            <div id="species-dropdown"
+                 style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1050;
+                        background:var(--card-bg);border:1px solid var(--border-color);
+                        border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);
+                        max-height:280px;overflow-y:auto;">
+            </div>
+            <div id="species-info" class="mt-1" style="display:none;"></div>
+            {% for e in form.species_name_free.errors %}
+              <div class="text-danger small mt-1">{{ e }}</div>
+            {% endfor %}
+            <div class="form-text">Search the species database or type a custom name if not listed.</div>
+          </div>
+
+          <!-- Quantity + Weight row -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {{ form.quantity.label(class="form-label fw-semibold") }}
+              {{ form.quantity(class="form-control" + (" is-invalid" if form.quantity.errors else ""),
+                 placeholder="e.g. 12", id="quantity", min="1") }}
+              {% for e in form.quantity.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.weight_kg.label(class="form-label fw-semibold") }}
+              <div class="input-group">
+                {{ form.weight_kg(class="form-control" + (" is-invalid" if form.weight_kg.errors else ""),
+                   placeholder="e.g. 3.5", id="weight_kg", step="0.01") }}
+                <span class="input-group-text">kg</span>
+              </div>
+              {% for e in form.weight_kg.errors %}
+                <div class="invalid-feedback d-block">{{ e }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Size + Gear row -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {{ form.size_cm.label(class="form-label fw-semibold") }}
+              <div class="input-group">
+                {{ form.size_cm(class="form-control" + (" is-invalid" if form.size_cm.errors else ""),
+                   placeholder="e.g. 28", id="size_cm", step="0.1") }}
+                <span class="input-group-text">cm</span>
+              </div>
+              {% for e in form.size_cm.errors %}
+                <div class="invalid-feedback d-block">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.gear_type_id.label(class="form-label fw-semibold") }}
+              {{ form.gear_type_id(class="form-select" + (" is-invalid" if form.gear_type_id.errors else ""),
+                 id="gear_type_id") }}
+              {% for e in form.gear_type_id.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="mb-4">
+            {{ form.notes.label(class="form-label fw-semibold") }}
+            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""),
+               rows=2, placeholder="Optional notes…", id="catch_notes") }}
+            {% for e in form.notes.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('trips.trip_detail', trip_id=trip.id) }}" class="iara-btn iara-btn-outline">
+              Cancel
+            </a>
+            {{ form.submit(class="iara-btn iara-btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // ── Species Autocomplete ─────────────────────────────────────────────────
+  const searchInput  = document.getElementById('species_search');
+  const hiddenId     = document.getElementById('species_id_hidden');
+  const dropdown     = document.getElementById('species-dropdown');
+  const infoBox      = document.getElementById('species-info');
+  const clearBtn     = document.getElementById('clear-species');
+
+  let debounceTimer;
+
+  function renderSpeciesInfo(sp) {
+    let badges = '';
+    if (sp.is_protected) {
+      badges += `<span class="iara-badge iara-badge-danger ms-1">🛡️ Protected</span>`;
+    }
+    if (sp.daily_limit) {
+      badges += `<span class="iara-badge iara-badge-warning ms-1">Limit: ${sp.daily_limit} kg/day</span>`;
+    }
+    if (sp.min_size_cm) {
+      badges += `<span class="iara-badge iara-badge-info ms-1">Min: ${sp.min_size_cm} cm</span>`;
+    }
+    infoBox.innerHTML = `<small class="text-muted fst-italic">${sp.scientific || ''}</small> ${badges}`;
+    infoBox.style.display = 'block';
+  }
+
+  searchInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    hiddenId.value = '';
+    infoBox.style.display = 'none';
+
+    if (q.length < 1) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    debounceTimer = setTimeout(() => {
+      fetch(`/trips/api/species/search?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(data => {
+          dropdown.innerHTML = '';
+          if (data.length === 0) {
+            dropdown.innerHTML = '<div class="px-3 py-2 text-muted small">No species found — name will be saved as entered.</div>';
+          } else {
+            data.forEach(sp => {
+              const item = document.createElement('div');
+              item.className = 'species-ac-item';
+              item.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-color);transition:background .15s;';
+              item.innerHTML = `
+                <div class="fw-semibold" style="color:var(--text-primary);">
+                  ${sp.name_bg}
+                  ${sp.is_protected ? '<span style="color:#dc2626;font-size:11px;margin-left:4px;">🛡️ Protected</span>' : ''}
+                </div>
+                <div class="small text-muted">${sp.name_en ? sp.name_en + ' · ' : ''}${sp.scientific || ''}</div>
+              `;
+              item.addEventListener('mouseenter', () => item.style.background = 'var(--bg-secondary)');
+              item.addEventListener('mouseleave', () => item.style.background = '');
+              item.addEventListener('click', () => {
+                searchInput.value = sp.name_bg;
+                hiddenId.value    = sp.id;
+                dropdown.style.display = 'none';
+                renderSpeciesInfo(sp);
+              });
+              dropdown.appendChild(item);
+            });
+          }
+          dropdown.style.display = 'block';
+        });
+    }, 250);
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Clear button
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    hiddenId.value    = '';
+    dropdown.style.display = 'none';
+    infoBox.style.display  = 'none';
+    searchInput.focus();
+  });
+</script>
+{% endblock %}

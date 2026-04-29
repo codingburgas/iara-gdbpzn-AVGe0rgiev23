@@ -88,6 +88,10 @@
         class="sidebar-link {% if 'violation' in request.endpoint %}active{% endif %}">
         <i class="bi bi-exclamation-triangle"></i> Violations
       </a>
+      <a href="{{ url_for('trips.trips_list') }}"
+        class="sidebar-link {% if 'trips' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> Trip Logbook
+      </a>
       <a href="{{ url_for('admin.admin_inspector_performance') }}"
         class="sidebar-link {% if 'performance' in request.endpoint %}active{% endif %}">
         <i class="bi bi-bar-chart-line"></i> Performance
@@ -140,6 +144,10 @@
         class="sidebar-link {% if request.endpoint == 'inspector.create_inspection' %}active{% endif %}">
         <i class="bi bi-plus-circle"></i> New Inspection
       </a>
+      <a href="{{ url_for('trips.trips_list') }}"
+        class="sidebar-link {% if 'trips' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> Trip Logbook
+      </a>
       {% endif %}
 
       <!-- ── FISHERMAN MENU ── -->
@@ -150,6 +158,17 @@
         class="sidebar-link {% if request.endpoint == 'fisherman.fisherman_dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">Catch Logbook</div>
+
+      <a href="{{ url_for('trips.trips_list') }}"
+        class="sidebar-link {% if request.endpoint in ['trips.trips_list','trips.trip_detail','trips.end_trip','trips.add_catch'] %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> My Trips
+      </a>
+      <a href="{{ url_for('trips.start_trip') }}"
+        class="sidebar-link {% if request.endpoint == 'trips.start_trip' %}active{% endif %}">
+        <i class="bi bi-play-circle"></i> Start New Trip
+      </a>
       {% endif %}
 
       <!-- ── AMATEUR MENU ── -->
@@ -159,6 +178,17 @@
       <a href="{{ url_for('fisherman.amateur_dashboard') }}"
         class="sidebar-link {% if request.endpoint == 'fisherman.amateur_dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">Catch Logbook</div>
+
+      <a href="{{ url_for('trips.trips_list') }}"
+        class="sidebar-link {% if request.endpoint in ['trips.trips_list','trips.trip_detail','trips.end_trip','trips.add_catch'] %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> My Trips
+      </a>
+      <a href="{{ url_for('trips.start_trip') }}"
+        class="sidebar-link {% if request.endpoint == 'trips.start_trip' %}active{% endif %}">
+        <i class="bi bi-play-circle"></i> Start New Trip
       </a>
       {% endif %}
 

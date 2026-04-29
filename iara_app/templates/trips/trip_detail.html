@@ -1,0 +1,223 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<!-- ── Header ──────────────────────────────────────────────── -->
+<div class="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <a href="{{ url_for('trips.trips_list') }}" class="iara-btn iara-btn-sm iara-btn-outline">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h1 class="page-title mb-0">Trip #{{ trip.id }}</h1>
+      {% if trip.status == 'active' %}
+        <span class="iara-badge iara-badge-success ms-1">🟢 Active</span>
+      {% else %}
+        <span class="iara-badge iara-badge-info ms-1">✅ Completed</span>
+      {% endif %}
+    </div>
+    <p class="text-muted mb-0">
+      {{ trip.start_datetime.strftime('%A, %d %B %Y') }}
+      {% if trip.fisherman %}— {{ trip.fisherman.first_name }} {{ trip.fisherman.last_name }}{% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if trip.status == 'active' and current_user.role in ['fisherman','amateur'] and trip.fisherman_id == current_user.id %}
+    <a href="{{ url_for('trips.add_catch', trip_id=trip.id) }}" class="iara-btn iara-btn-primary">
+      <i class="bi bi-plus-circle me-1"></i> Add Catch
+    </a>
+    <a href="{{ url_for('trips.end_trip', trip_id=trip.id) }}" class="iara-btn iara-btn-danger">
+      <i class="bi bi-stop-circle me-1"></i> End Trip
+    </a>
+    {% endif %}
+    <a href="{{ url_for('trips.trip_print', trip_id=trip.id) }}" target="_blank"
+       class="iara-btn iara-btn-outline">
+      <i class="bi bi-printer me-1"></i> Print
+    </a>
+  </div>
+</div>
+
+<!-- ── Info cards row ─────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="iara-stat-card">
+      <div class="stat-icon" style="background:rgba(59,130,246,.12);color:#3b82f6;">
+        <i class="bi bi-clock"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ trip.duration_hours or '—' }}{% if trip.duration_hours %}h{% endif %}</div>
+        <div class="stat-label">Duration</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="iara-stat-card">
+      <div class="stat-icon" style="background:rgba(34,197,94,.12);color:#22c55e;">
+        <i class="bi bi-fish"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ total_qty }}</div>
+        <div class="stat-label">Total Fish</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="iara-stat-card">
+      <div class="stat-icon" style="background:rgba(249,115,22,.12);color:#f97316;">
+        <i class="bi bi-graph-up"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ "%.2f"|format(total_weight) }} kg</div>
+        <div class="stat-label">Total Weight</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="iara-stat-card">
+      <div class="stat-icon" style="background:rgba(168,85,247,.12);color:#a855f7;">
+        <i class="bi bi-droplet"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ trip.fuel_liters or '—' }}{% if trip.fuel_liters %} L{% endif %}</div>
+        <div class="stat-label">Fuel Loaded</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── Trip Details ───────────────────────────────────────── -->
+  <div class="col-lg-4">
+    <div class="iara-card h-100">
+      <div class="iara-card-header">
+        <i class="bi bi-info-circle me-2"></i>Trip Information
+      </div>
+      <div class="iara-card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Departure</dt>
+          <dd class="col-7">{{ trip.start_datetime.strftime('%d %b %Y %H:%M') }}</dd>
+
+          <dt class="col-5 text-muted">Return</dt>
+          <dd class="col-7">
+            {% if trip.end_datetime %}{{ trip.end_datetime.strftime('%d %b %Y %H:%M') }}
+            {% else %}<span class="text-muted fst-italic">Not ended yet</span>{% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted">Location</dt>
+          <dd class="col-7">{{ trip.location or '—' }}</dd>
+
+          <dt class="col-5 text-muted">Weather</dt>
+          <dd class="col-7">{{ trip.weather or '—' }}</dd>
+
+          <dt class="col-5 text-muted">Vessel</dt>
+          <dd class="col-7">
+            {% if trip.vessel %}
+              <strong>{{ trip.vessel.international_number }}</strong><br>
+              <small class="text-muted">{{ trip.vessel.name_bg or trip.vessel.call_sign }}</small>
+            {% else %}—{% endif %}
+          </dd>
+
+          {% if trip.notes %}
+          <dt class="col-5 text-muted">Notes</dt>
+          <dd class="col-7">{{ trip.notes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Catch Table ────────────────────────────────────────── -->
+  <div class="col-lg-8">
+    <div class="iara-card">
+      <div class="iara-card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-fish me-2"></i>Catch Records</span>
+        {% if trip.status == 'active' and current_user.role in ['fisherman','amateur'] and trip.fisherman_id == current_user.id %}
+        <a href="{{ url_for('trips.add_catch', trip_id=trip.id) }}" class="iara-btn iara-btn-sm iara-btn-primary">
+          <i class="bi bi-plus me-1"></i>Add Catch
+        </a>
+        {% endif %}
+      </div>
+      <div class="iara-card-body p-0">
+        {% if trip.catch_records %}
+        <div class="table-responsive">
+          <table class="iara-table">
+            <thead>
+              <tr>
+                <th>Species</th>
+                <th>Qty</th>
+                <th>Weight (kg)</th>
+                <th>Size (cm)</th>
+                <th>Gear</th>
+                <th>Notes</th>
+                <th>Flags</th>
+                {% if trip.status == 'active' and current_user.role in ['fisherman','amateur'] and trip.fisherman_id == current_user.id %}
+                <th></th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for rec in trip.catch_records %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ rec.display_species }}</div>
+                  {% if rec.species and rec.species.scientific_name %}
+                    <small class="text-muted fst-italic">{{ rec.species.scientific_name }}</small>
+                  {% endif %}
+                </td>
+                <td>{{ rec.quantity }}</td>
+                <td><strong>{{ "%.2f"|format(rec.weight_kg) }}</strong></td>
+                <td>{{ rec.size_cm or '—' }}</td>
+                <td>{{ rec.gear_type.name if rec.gear_type else '—' }}</td>
+                <td><small class="text-muted">{{ rec.notes or '—' }}</small></td>
+                <td>
+                  {% if rec.species and rec.species.is_protected %}
+                    <span class="iara-badge iara-badge-danger" title="Protected Species">🛡️ Protected</span>
+                  {% endif %}
+                  {% if rec.species and rec.species.min_size_cm and rec.size_cm and rec.size_cm < rec.species.min_size_cm %}
+                    <span class="iara-badge iara-badge-warning" title="Below minimum size">⚠️ Undersized</span>
+                  {% endif %}
+                </td>
+                {% if trip.status == 'active' and current_user.role in ['fisherman','amateur'] and trip.fisherman_id == current_user.id %}
+                <td>
+                  <form method="POST"
+                        action="{{ url_for('trips.delete_catch', trip_id=trip.id, record_id=rec.id) }}"
+                        onsubmit="return confirm('Delete this catch record?')">
+                    {{ csrf_token() if csrf_token is defined else '' }}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="iara-btn iara-btn-sm iara-btn-danger" title="Delete">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--bg-secondary);font-weight:600;">
+                <td>TOTALS</td>
+                <td>{{ total_qty }}</td>
+                <td>{{ "%.2f"|format(total_weight) }} kg</td>
+                <td colspan="{% if trip.status == 'active' and current_user.role in ['fisherman','amateur'] and trip.fisherman_id == current_user.id %}5{% else %}4{% endif %}"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-fish" style="font-size:2.5rem;color:var(--text-secondary);opacity:.4;"></i>
+          <p class="mt-2 text-muted">No catch records yet.</p>
+          {% if trip.status == 'active' and current_user.role in ['fisherman','amateur'] and trip.fisherman_id == current_user.id %}
+          <a href="{{ url_for('trips.add_catch', trip_id=trip.id) }}" class="iara-btn iara-btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Log First Catch
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

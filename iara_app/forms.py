@@ -2,12 +2,12 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import (
     StringField, PasswordField, SubmitField,
-    SelectField, IntegerField, FloatField, DateField,
-    BooleanField, TextAreaField, TelField
+    SelectField, IntegerField, FloatField, DateField, DateTimeLocalField,
+    BooleanField, TextAreaField, TelField, HiddenField
 )
 from wtforms.validators import (
     DataRequired, Email, Length, EqualTo,
-    Optional, ValidationError, Regexp
+    Optional, ValidationError, Regexp, NumberRange
 )
 from .models import PermitStatus, VesselStatus, Vessel, ViolationCategory, ViolationSeverity
 
@@ -313,3 +313,66 @@ class SpeciesCSVImportForm(FlaskForm):
         FileAllowed(["csv"], "Only .csv files are accepted.")
     ])
     submit = SubmitField("Import Species")
+
+
+# ============================================================
+# FISHING TRIP FORMS
+# ============================================================
+
+class StartTripForm(FlaskForm):
+    """Start a new fishing trip."""
+    vessel_id      = SelectField("Vessel", coerce=int, validators=[Optional()])
+    start_datetime = DateTimeLocalField("Departure Date & Time *",
+                         format="%Y-%m-%dT%H:%M", validators=[DataRequired()])
+    location       = StringField("Departure Location",   validators=[Optional(), Length(max=255)])
+    weather        = StringField("Weather Conditions",    validators=[Optional(), Length(max=100)])
+    fuel_liters    = FloatField("Fuel Loaded (liters)",  validators=[Optional(),
+                         NumberRange(min=0, message="Fuel must be a positive number")])
+    notes          = TextAreaField("Notes",              validators=[Optional(), Length(max=2000)])
+    submit         = SubmitField("Start Trip")
+
+    def set_vessel_choices(self, user):
+        """Pre-select the fisherman's linked vessel; also allow picking any vessel."""
+        from .models import Vessel
+        vessels = Vessel.query.order_by(Vessel.name_bg).all()
+        choices = [(0, "— No vessel selected —")]
+        choices += [(v.id, f"{v.international_number} — {v.name_bg or v.call_sign}") for v in vessels]
+        self.vessel_id.choices = choices
+        # Auto-select the fisherman's linked vessel
+        if user.vessel_registration and not self.vessel_id.data:
+            linked = Vessel.query.filter_by(
+                international_number=user.vessel_registration
+            ).first()
+            if linked:
+                self.vessel_id.data = linked.id
+
+
+class EndTripForm(FlaskForm):
+    """Mark a trip as completed and record the end time."""
+    end_datetime = DateTimeLocalField("Return Date & Time *",
+                       format="%Y-%m-%dT%H:%M", validators=[DataRequired()])
+    notes        = TextAreaField("Final Notes",  validators=[Optional(), Length(max=2000)])
+    submit       = SubmitField("End Trip")
+
+
+class CatchRecordForm(FlaskForm):
+    """Add a catch record to a fishing trip."""
+    species_id        = HiddenField("Species ID")          # set by autocomplete JS
+    species_name_free = StringField("Species",
+                            validators=[Optional(), Length(max=150)],
+                            description="Start typing to search, or enter manually")
+    quantity          = IntegerField("Quantity (no. of fish) *",
+                            validators=[DataRequired(), NumberRange(min=1)])
+    weight_kg         = FloatField("Total Weight (kg) *",
+                            validators=[DataRequired(),
+                                        NumberRange(min=0.001, message="Weight must be > 0")])
+    size_cm           = FloatField("Average Size (cm)",    validators=[Optional(),
+                            NumberRange(min=0)])
+    gear_type_id      = SelectField("Gear Type", coerce=int, validators=[Optional()])
+    notes             = TextAreaField("Notes",             validators=[Optional(), Length(max=1000)])
+    submit            = SubmitField("Save Catch Record")
+
+    def set_gear_choices(self):
+        from .models import GearType
+        gears = GearType.query.order_by(GearType.name).all()
+        self.gear_type_id.choices = [(0, "— select gear —")] + [(g.id, f"{g.code} — {g.name}") for g in gears]
