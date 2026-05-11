@@ -1,0 +1,89 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="fw-bold mb-1" style="font-size:1.6rem;">
+      <i class="bi bi-gear-fill me-2" style="color:var(--accent-primary);"></i>Notification Preferences
+    </h1>
+    <p class="text-muted mb-0" style="font-size:.9rem;">
+      Control how and when you receive system notifications.
+    </p>
+  </div>
+  <a href="{{ url_for('alerts.notification_center') }}"
+     style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:8px;text-decoration:none;color:var(--text-primary);font-size:.85rem;">
+    <i class="bi bi-arrow-left"></i>Back to Notifications
+  </a>
+</div>
+
+<div class="iara-card" style="max-width:560px;">
+  <form method="post" action="{{ url_for('alerts.preferences') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px;color:var(--text-primary);">
+      Delivery Channels
+    </h2>
+
+    {# Email digest #}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border-color);">
+      <div>
+        <div style="font-weight:600;font-size:.9rem;color:var(--text-primary);">
+          <i class="bi bi-envelope me-2" style="color:#6366f1;"></i>Email Notifications
+        </div>
+        <div style="font-size:.8rem;color:var(--text-secondary);margin-top:3px;">
+          Receive individual alert emails when they fire.
+        </div>
+      </div>
+      <label class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" name="email_enabled"
+          id="email_enabled" style="width:42px;height:22px;"
+          {% if pref.email_enabled %}checked{% endif %}>
+      </label>
+    </div>
+
+    {# Daily digest #}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border-color);">
+      <div>
+        <div style="font-weight:600;font-size:.9rem;color:var(--text-primary);">
+          <i class="bi bi-newspaper me-2" style="color:#0ea5e9;"></i>Daily Digest (08:00)
+        </div>
+        <div style="font-size:.8rem;color:var(--text-secondary);margin-top:3px;">
+          Receive a morning summary of all unread alerts from the last 24 hours.
+        </div>
+      </div>
+      <label class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" name="digest_enabled"
+          id="digest_enabled" style="width:42px;height:22px;"
+          {% if pref.digest_enabled %}checked{% endif %}>
+      </label>
+    </div>
+
+    {# SMS (stored only) #}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border-color);">
+      <div>
+        <div style="font-weight:600;font-size:.9rem;color:var(--text-primary);">
+          <i class="bi bi-phone me-2" style="color:#10b981;"></i>SMS Alerts
+          <span class="badge ms-2" style="background:#f1f5f9;color:#64748b;font-size:10px;">Coming soon</span>
+        </div>
+        <div style="font-size:.8rem;color:var(--text-secondary);margin-top:3px;">
+          Your preference will be saved and SMS delivery enabled in a future release.
+        </div>
+      </div>
+      <label class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" name="sms_enabled"
+          id="sms_enabled" style="width:42px;height:22px;"
+          {% if pref.sms_enabled %}checked{% endif %}>
+      </label>
+    </div>
+
+    <div class="mt-4">
+      <button type="submit"
+        style="padding:10px 24px;background:var(--accent-primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">
+        <i class="bi bi-check2 me-1"></i>Save Preferences
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

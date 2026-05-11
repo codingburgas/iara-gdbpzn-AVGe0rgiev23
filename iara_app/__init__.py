@@ -89,4 +89,39 @@ def create_app():
         days=1
     )
 
+    # ── Alert scheduler jobs (Module 13) ───────────────────────────────────
+    from .alerts_service import (
+        run_permit_expiry_alerts,
+        run_high_risk_vessel_detection,
+        run_unusual_activity_detection,
+        send_daily_digest,
+    )
+
+    scheduler.add_job(
+        id="permit_expiry_alerts",
+        func=run_permit_expiry_alerts,
+        trigger="interval",
+        days=1,
+    )
+    scheduler.add_job(
+        id="high_risk_vessel_alerts",
+        func=run_high_risk_vessel_detection,
+        trigger="interval",
+        days=1,
+    )
+    scheduler.add_job(
+        id="unusual_activity_alerts",
+        func=run_unusual_activity_detection,
+        trigger="interval",
+        days=1,
+    )
+    scheduler.add_job(
+        id="daily_alert_digest",
+        func=send_daily_digest,
+        trigger="cron",
+        hour=8,
+        minute=0,
+    )
+
     return app
+

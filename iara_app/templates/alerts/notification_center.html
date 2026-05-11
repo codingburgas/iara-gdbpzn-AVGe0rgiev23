@@ -1,0 +1,173 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+
+{# ── Severity helper ─────────────────────────────────────────────────── #}
+{% macro sev_icon(sev) %}
+  {% if sev == 'critical' %}<i class="bi bi-exclamation-octagon-fill text-danger"></i>
+  {% elif sev == 'high'   %}<i class="bi bi-exclamation-triangle-fill" style="color:#f97316;"></i>
+  {% elif sev == 'warning'%}<i class="bi bi-exclamation-circle-fill text-warning"></i>
+  {% else                 %}<i class="bi bi-info-circle-fill text-primary"></i>
+  {% endif %}
+{% endmacro %}
+
+{% macro sev_badge(sev) %}
+  {% if sev == 'critical' %}
+    <span class="badge" style="background:#fee2e2;color:#991b1b;font-size:11px;">CRITICAL</span>
+  {% elif sev == 'high' %}
+    <span class="badge" style="background:#ffedd5;color:#c2410c;font-size:11px;">HIGH</span>
+  {% elif sev == 'warning' %}
+    <span class="badge" style="background:#fefce8;color:#854d0e;font-size:11px;">WARNING</span>
+  {% else %}
+    <span class="badge" style="background:#eff6ff;color:#1e40af;font-size:11px;">INFO</span>
+  {% endif %}
+{% endmacro %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="fw-bold mb-1" style="font-size:1.6rem;">
+      <i class="bi bi-bell-fill me-2" style="color:var(--accent-primary);"></i>Notification Centre
+    </h1>
+    <p class="text-muted mb-0" style="font-size:.9rem;">
+      {% if unread_count > 0 %}
+        You have <strong>{{ unread_count }}</strong> unread notification{{ 's' if unread_count != 1 }}.
+      {% else %}
+        You're all caught up — no unread notifications.
+      {% endif %}
+    </p>
+  </div>
+  {% if unread_count > 0 %}
+  <form method="post" action="{{ url_for('alerts.mark_all_read') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-sm"
+      style="background:var(--accent-primary);color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:.85rem;">
+      <i class="bi bi-check2-all me-1"></i>Mark All Read
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+{# ── Tabs ─────────────────────────────────────────────────────────────── #}
+<div class="iara-card mb-4" style="padding:0;overflow:hidden;">
+  <div style="display:flex;border-bottom:1px solid var(--border-color);">
+    <a href="{{ url_for('alerts.notification_center', tab='unread') }}"
+       style="padding:14px 24px;font-size:.9rem;font-weight:600;text-decoration:none;border-bottom:3px solid {% if tab=='unread' %}var(--accent-primary){% else %}transparent{% endif %};color:{% if tab=='unread' %}var(--accent-primary){% else %}var(--text-secondary){% endif %};">
+      <i class="bi bi-bell me-1"></i>Unread
+    </a>
+    <a href="{{ url_for('alerts.notification_center', tab='all') }}"
+       style="padding:14px 24px;font-size:.9rem;font-weight:600;text-decoration:none;border-bottom:3px solid {% if tab=='all' %}var(--accent-primary){% else %}transparent{% endif %};color:{% if tab=='all' %}var(--accent-primary){% else %}var(--text-secondary){% endif %};">
+      <i class="bi bi-archive me-1"></i>All
+    </a>
+  </div>
+
+  {# ── Alert list ──────────────────────────────────────────────────────── #}
+  {% if alerts %}
+    <div>
+      {% for alert in alerts %}
+      <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border-color);{% if not alert.is_read %}background:rgba(59,130,246,.04);{% endif %}transition:background .15s;">
+
+        {# Severity icon #}
+        <div style="font-size:1.4rem;padding-top:2px;min-width:24px;text-align:center;">
+          {{ sev_icon(alert.severity) }}
+        </div>
+
+        {# Body #}
+        <div style="flex:1;min-width:0;">
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span style="font-weight:{% if not alert.is_read %}700{% else %}500{% endif %};font-size:.95rem;color:var(--text-primary);">
+              {{ alert.title }}
+            </span>
+            {{ sev_badge(alert.severity) }}
+            {% if not alert.is_read %}
+              <span class="badge" style="background:var(--accent-primary);color:#fff;font-size:10px;">NEW</span>
+            {% endif %}
+          </div>
+          <p style="font-size:.85rem;color:var(--text-secondary);margin:0 0 6px;">{{ alert.message }}</p>
+          <small style="color:var(--text-muted,#94a3b8);font-size:.78rem;">
+            <i class="bi bi-clock me-1"></i>{{ alert.created_at.strftime('%d %b %Y %H:%M') }}
+            &nbsp;·&nbsp;
+            <span style="text-transform:capitalize;">{{ alert.type.replace('_',' ') }}</span>
+          </small>
+        </div>
+
+        {# Action #}
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:90px;">
+          {% if not alert.is_read %}
+          <form method="post" action="{{ url_for('alerts.mark_read', alert_id=alert.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" title="Mark read{% if alert.link_url %} & open{% endif %}"
+              style="background:var(--surface-hover,#f1f5f9);border:1px solid var(--border-color);border-radius:8px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--text-primary);">
+              {% if alert.link_url %}<i class="bi bi-arrow-right-circle me-1"></i>Open{% else %}<i class="bi bi-check me-1"></i>Read{% endif %}
+            </button>
+          </form>
+          {% elif alert.link_url %}
+          <a href="{{ alert.link_url }}"
+             style="background:var(--surface-hover,#f1f5f9);border:1px solid var(--border-color);border-radius:8px;padding:5px 12px;font-size:.8rem;text-decoration:none;color:var(--text-primary);">
+            <i class="bi bi-arrow-right-circle me-1"></i>Open
+          </a>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Pagination #}
+    {% if pagination.pages > 1 %}
+    <div style="padding:16px 20px;display:flex;gap:8px;align-items:center;justify-content:center;">
+      {% if pagination.has_prev %}
+      <a href="{{ url_for('alerts.notification_center', tab=tab, page=pagination.prev_num) }}"
+         class="btn btn-sm btn-outline-secondary">‹ Prev</a>
+      {% endif %}
+      <span style="font-size:.85rem;color:var(--text-secondary);">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+      </span>
+      {% if pagination.has_next %}
+      <a href="{{ url_for('alerts.notification_center', tab=tab, page=pagination.next_num) }}"
+         class="btn btn-sm btn-outline-secondary">Next ›</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  {% else %}
+    {# Empty state #}
+    <div style="text-align:center;padding:60px 20px;">
+      <div style="font-size:3.5rem;margin-bottom:16px;">🔔</div>
+      <h3 style="font-size:1.1rem;font-weight:600;color:var(--text-primary);margin-bottom:8px;">
+        {% if tab == 'unread' %}No unread notifications{% else %}No notifications yet{% endif %}
+      </h3>
+      <p style="color:var(--text-secondary);font-size:.9rem;max-width:340px;margin:0 auto;">
+        {% if tab == 'unread' %}
+          You're all caught up! Switch to the <a href="{{ url_for('alerts.notification_center', tab='all') }}">All</a> tab to see past alerts.
+        {% else %}
+          The system will automatically generate alerts for permit expiry, high-risk vessels, and unusual activity.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+</div>
+
+{# Admin quick links #}
+{% if current_user.role == 'administrator' %}
+<div class="d-flex gap-3 flex-wrap">
+  <a href="{{ url_for('alerts.alert_rules') }}"
+     style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:10px;text-decoration:none;color:var(--text-primary);font-size:.875rem;font-weight:500;">
+    <i class="bi bi-sliders2" style="color:var(--accent-primary);"></i>Manage Alert Rules
+  </a>
+  <a href="{{ url_for('alerts.test_trigger') }}"
+     style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:10px;text-decoration:none;color:var(--text-primary);font-size:.875rem;font-weight:500;">
+    <i class="bi bi-play-circle" style="color:#10b981;"></i>Test Trigger All Jobs
+  </a>
+  <a href="{{ url_for('alerts.preferences') }}"
+     style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:10px;text-decoration:none;color:var(--text-primary);font-size:.875rem;font-weight:500;">
+    <i class="bi bi-gear" style="color:#6366f1;"></i>My Preferences
+  </a>
+</div>
+{% else %}
+<a href="{{ url_for('alerts.preferences') }}"
+   style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:10px;text-decoration:none;color:var(--text-primary);font-size:.875rem;font-weight:500;">
+  <i class="bi bi-gear" style="color:#6366f1;"></i>Notification Preferences
+</a>
+{% endif %}
+
+{% endblock %}

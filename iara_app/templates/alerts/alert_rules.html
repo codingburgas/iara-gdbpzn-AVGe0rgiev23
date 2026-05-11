@@ -1,0 +1,129 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="fw-bold mb-1" style="font-size:1.6rem;">
+      <i class="bi bi-sliders2 me-2" style="color:var(--accent-primary);"></i>Alert Rules
+    </h1>
+    <p class="text-muted mb-0" style="font-size:.9rem;">
+      Configure thresholds that control when automatic alerts fire.
+    </p>
+  </div>
+  <a href="{{ url_for('alerts.notification_center') }}"
+     style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:8px;text-decoration:none;color:var(--text-primary);font-size:.85rem;">
+    <i class="bi bi-arrow-left"></i>Back to Notifications
+  </a>
+</div>
+
+{# ── Add Rule Form ──────────────────────────────────────────────────────── #}
+<div class="iara-card mb-4">
+  <h2 style="font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
+    <i class="bi bi-plus-circle me-2" style="color:var(--accent-primary);"></i>Add New Rule
+  </h2>
+  <form method="post" action="{{ url_for('alerts.alert_rules') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Rule Name</label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. 7-day permit warning" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Rule Type</label>
+        <select name="rule_type" class="form-select">
+          {% for val, label in rule_type_choices %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Threshold</label>
+        <input type="number" name="threshold" class="form-control" value="7" min="0" max="999">
+        <div class="form-text" style="font-size:.75rem;">Days before expiry / violation count</div>
+      </div>
+      <div class="col-md-2">
+        <button type="submit"
+          style="width:100%;padding:9px;background:var(--accent-primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.875rem;">
+          <i class="bi bi-plus me-1"></i>Add Rule
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{# ── Rules Table ─────────────────────────────────────────────────────────── #}
+<div class="iara-card" style="padding:0;overflow:hidden;">
+  {% if rules %}
+  <table class="table mb-0" style="font-size:.875rem;">
+    <thead style="background:var(--surface-hover,#f8fafc);">
+      <tr>
+        <th style="padding:14px 20px;font-weight:600;color:var(--text-secondary);border:none;">Rule Name</th>
+        <th style="padding:14px 16px;font-weight:600;color:var(--text-secondary);border:none;">Type</th>
+        <th style="padding:14px 16px;font-weight:600;color:var(--text-secondary);border:none;">Threshold</th>
+        <th style="padding:14px 16px;font-weight:600;color:var(--text-secondary);border:none;">Status</th>
+        <th style="padding:14px 16px;font-weight:600;color:var(--text-secondary);border:none;">Created</th>
+        <th style="padding:14px 16px;font-weight:600;color:var(--text-secondary);border:none;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr style="border-top:1px solid var(--border-color);">
+        <td style="padding:14px 20px;font-weight:600;color:var(--text-primary);">{{ rule.name }}</td>
+        <td style="padding:14px 16px;">
+          {% if rule.rule_type == 'permit_expiry' %}
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;">Permit Expiry</span>
+          {% elif rule.rule_type == 'high_risk' %}
+            <span class="badge" style="background:#fef2f2;color:#991b1b;">High Risk</span>
+          {% else %}
+            <span class="badge" style="background:#fefce8;color:#854d0e;">Unusual Activity</span>
+          {% endif %}
+        </td>
+        <td style="padding:14px 16px;color:var(--text-primary);">{{ rule.threshold }}</td>
+        <td style="padding:14px 16px;">
+          {% if rule.is_enabled %}
+            <span class="badge" style="background:#dcfce7;color:#166534;">Enabled</span>
+          {% else %}
+            <span class="badge" style="background:#f1f5f9;color:#64748b;">Disabled</span>
+          {% endif %}
+        </td>
+        <td style="padding:14px 16px;color:var(--text-secondary);">
+          {{ rule.created_at.strftime('%d %b %Y') if rule.created_at else '—' }}
+        </td>
+        <td style="padding:14px 16px;">
+          <div class="d-flex gap-2">
+            {# Toggle enable/disable #}
+            <form method="post" action="{{ url_for('alerts.toggle_rule', rule_id=rule.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit"
+                style="border:1px solid var(--border-color);background:{% if rule.is_enabled %}#fef2f2{% else %}#f0fdf4{% endif %};border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer;color:{% if rule.is_enabled %}#991b1b{% else %}#166534{% endif %};">
+                {% if rule.is_enabled %}<i class="bi bi-pause-fill me-1"></i>Disable{% else %}<i class="bi bi-play-fill me-1"></i>Enable{% endif %}
+              </button>
+            </form>
+            {# Delete #}
+            <form method="post" action="{{ url_for('alerts.alert_rules') }}"
+              onsubmit="return confirm('Delete rule \'{{ rule.name }}\'?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="rule_id" value="{{ rule.id }}">
+              <button type="submit"
+                style="border:1px solid #fca5a5;background:#fef2f2;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer;color:#991b1b;">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:50px 20px;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">⚙️</div>
+    <p style="color:var(--text-secondary);font-size:.9rem;">No rules configured yet. Add the first one above.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

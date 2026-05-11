@@ -122,6 +122,11 @@
         class="sidebar-link {% if 'audit' in request.endpoint %}active{% endif %}">
         <i class="bi bi-journal-text"></i> Audit Log
       </a>
+      <a href="{{ url_for('alerts.notification_center') }}"
+        class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}" style="position:relative;">
+        <i class="bi bi-bell"></i> Notifications
+        <span id="sidebar-notif-badge-admin" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 4px;line-height:18px;text-align:center;"></span>
+      </a>
       {% endif %}
 
       <!-- ── INSPECTOR MENU ── -->
@@ -148,6 +153,11 @@
         class="sidebar-link {% if 'trips' in request.endpoint %}active{% endif %}">
         <i class="bi bi-journal-text"></i> Trip Logbook
       </a>
+      <a href="{{ url_for('alerts.notification_center') }}"
+        class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-bell"></i> Notifications
+        <span id="sidebar-notif-badge-insp" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 4px;line-height:18px;text-align:center;"></span>
+      </a>
       {% endif %}
 
       <!-- ── FISHERMAN MENU ── -->
@@ -169,6 +179,11 @@
         class="sidebar-link {% if request.endpoint == 'trips.start_trip' %}active{% endif %}">
         <i class="bi bi-play-circle"></i> Start New Trip
       </a>
+      <a href="{{ url_for('alerts.notification_center') }}"
+        class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-bell"></i> Notifications
+        <span id="sidebar-notif-badge-fish" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 4px;line-height:18px;text-align:center;"></span>
+      </a>
       {% endif %}
 
       <!-- ── AMATEUR MENU ── -->
@@ -189,6 +204,11 @@
       <a href="{{ url_for('trips.start_trip') }}"
         class="sidebar-link {% if request.endpoint == 'trips.start_trip' %}active{% endif %}">
         <i class="bi bi-play-circle"></i> Start New Trip
+      </a>
+      <a href="{{ url_for('alerts.notification_center') }}"
+        class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-bell"></i> Notifications
+        <span id="sidebar-notif-badge-amateur" style="display:none;margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 4px;line-height:18px;text-align:center;"></span>
       </a>
       {% endif %}
 
@@ -227,6 +247,18 @@
       </div>
       <div class="topbar-actions">
         {% if current_user.is_authenticated %}
+
+        <!-- Notification Bell -->
+        <a href="{{ url_for('alerts.notification_center') }}"
+           id="notif-bell-btn"
+           style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;background:var(--surface-card);border:1px solid var(--border-color);border-radius:10px;text-decoration:none;color:var(--text-primary);transition:background .15s;"
+           title="Notifications">
+          <i class="bi bi-bell" style="font-size:1.1rem;"></i>
+          <span id="notif-badge"
+                style="display:none;position:absolute;top:-5px;right:-5px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 4px;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--surface-bg,#fff);"
+                aria-label="unread notifications"></span>
+        </a>
+
         {% if current_user.role == "administrator" %}
         <span class="topbar-badge">
           <i class="bi bi-shield-check"></i> Administrator
@@ -275,6 +307,39 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  {% if current_user.is_authenticated %}
+  <!-- Notification bell auto-poll (Module 13) -->
+  <script>
+  (function () {
+    const badge   = document.getElementById('notif-badge');
+    const sidebar = document.querySelectorAll(
+      '#sidebar-notif-badge-admin,#sidebar-notif-badge-insp,#sidebar-notif-badge-fish,#sidebar-notif-badge-amateur'
+    );
+
+    function updateBadge(count) {
+      if (count > 0) {
+        const label = count > 99 ? '99+' : count;
+        if (badge) { badge.textContent = label; badge.style.display = 'inline-block'; }
+        sidebar.forEach(el => { el.textContent = label; el.style.display = 'inline-block'; });
+      } else {
+        if (badge) badge.style.display = 'none';
+        sidebar.forEach(el => el.style.display = 'none');
+      }
+    }
+
+    function poll() {
+      fetch('{{ url_for("alerts.api_unread_count") }}')
+        .then(r => r.json())
+        .then(d => updateBadge(d.count || 0))
+        .catch(() => {});
+    }
+
+    poll();                            // immediate on load
+    setInterval(poll, 60000);         // then every 60 s
+  })();
+  </script>
+  {% endif %}
 
   {% block extra_scripts %}{% endblock %}
 

@@ -70,6 +70,7 @@ class User(UserMixin, db.Model):
     scheduled_inspections = db.relationship("ScheduledInspection", foreign_keys="ScheduledInspection.inspector_id", backref="assigned_inspector", lazy=True)
     created_scheduled_inspections = db.relationship("ScheduledInspection", foreign_keys="ScheduledInspection.created_by_id", backref="created_by_user", lazy=True)
     audit_logs = db.relationship("AuditLog", foreign_keys="AuditLog.user_id", backref="user", lazy=True)
+    alerts = db.relationship("Alert", foreign_keys="Alert.user_id", backref="recipient", lazy=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(
@@ -591,3 +592,96 @@ class CatchRecord(db.Model):
 
     def __repr__(self) -> str:
         return f"<CatchRecord trip={self.trip_id} species={self.display_species} {self.weight_kg}kg>"
+
+
+# ============================================================
+# ALERT SEVERITY ENUM
+# ============================================================
+
+class AlertSeverity(Enum):
+    INFO     = "info"
+    WARNING  = "warning"
+    HIGH     = "high"
+    CRITICAL = "critical"
+
+
+# ============================================================
+# ALERT
+# ============================================================
+
+class Alert(db.Model):
+    """A system-generated notification for a specific user."""
+    __tablename__ = "alert"
+
+    id         = db.Column(db.Integer, primary_key=True)
+
+    # Recipient
+    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    # Content
+    type       = db.Column(db.String(50),  nullable=False)   # e.g. "permit_expiry", "high_risk", "unusual_activity"
+    title      = db.Column(db.String(255), nullable=False)
+    message    = db.Column(db.Text,        nullable=False)
+    severity   = db.Column(db.String(20),  nullable=False, default=AlertSeverity.INFO.value)
+
+    # State
+    is_read    = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Deep-link — where to navigate when the alert is clicked
+    link_url   = db.Column(db.String(512), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<Alert [{self.severity}] {self.title} → user {self.user_id}>"
+
+
+# ============================================================
+# ALERT RULE  (admin-configurable thresholds)
+# ============================================================
+
+class AlertRule(db.Model):
+    """Admin-defined rules that control when alerts fire."""
+    __tablename__ = "alert_rule"
+
+    id             = db.Column(db.Integer, primary_key=True)
+
+    name           = db.Column(db.String(150), nullable=False)
+    # rule_type mirrors the Alert.type values
+    rule_type      = db.Column(db.String(50),  nullable=False)
+    # Generic numeric threshold (meaning depends on rule_type)
+    # e.g. for permit_expiry → days before expiry; for high_risk → violation count
+    threshold      = db.Column(db.Integer,     nullable=False, default=0)
+
+    is_enabled     = db.Column(db.Boolean,     nullable=False, default=True)
+
+    created_by_id  = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+
+    def __repr__(self) -> str:
+        return f"<AlertRule {self.name} ({'on' if self.is_enabled else 'off'})>"
+
+
+# ============================================================
+# USER ALERT PREFERENCE
+# ============================================================
+
+class UserAlertPreference(db.Model):
+    """Per-user opt-in/out settings for alert delivery channels."""
+    __tablename__ = "user_alert_preference"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
+
+    email_enabled   = db.Column(db.Boolean, default=True,  nullable=False)
+    sms_enabled     = db.Column(db.Boolean, default=False, nullable=False)  # stored; delivery not implemented
+    digest_enabled  = db.Column(db.Boolean, default=True,  nullable=False)  # daily morning digest
+
+    updated_at      = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("alert_preference", uselist=False))
+
+    def __repr__(self) -> str:
+        return f"<UserAlertPreference user={self.user_id}>"
