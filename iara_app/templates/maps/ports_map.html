@@ -1,0 +1,117 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <div>
+    <h1 style="font-size:1.4rem;font-weight:700;margin:0;color:var(--text-primary);"><i class="bi bi-anchor me-2"></i>Port Directory</h1>
+    <p style="font-size:.82rem;color:var(--text-secondary);margin:2px 0 0;">{{ ports|length }} registered fishing ports on map</p>
+  </div>
+  <a href="{{ url_for('maps.fleet_map') }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--surface-card);border:1px solid var(--border-color);color:var(--text-secondary);text-decoration:none;font-size:.82rem;">
+    <i class="bi bi-arrow-left"></i> Fleet Map
+  </a>
+</div>
+
+<!-- Region filter pills -->
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+  <button class="port-filter active" data-region="all" onclick="filterPorts(this,'all')">All Ports</button>
+  <button class="port-filter" data-region="Black Sea" onclick="filterPorts(this,'Black Sea')">🌊 Black Sea</button>
+  <button class="port-filter" data-region="Danube" onclick="filterPorts(this,'Danube')">🏞️ Danube</button>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+  <!-- Map -->
+  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--border-color);box-shadow:0 4px 20px rgba(0,0,0,.2);">
+    <div id="ports-map" style="width:100%;height:580px;"></div>
+  </div>
+
+  <!-- Port list sidebar -->
+  <div style="background:var(--surface-card);border:1px solid var(--border-color);border-radius:14px;padding:14px;max-height:600px;overflow-y:auto;">
+    <div style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Port List</div>
+    <div id="port-list">
+      {% for p in ports %}
+      <div class="port-list-item" data-region="{{ p.region or '' }}" data-id="{{ p.id }}" onclick="focusPort({{ p.lat }},{{ p.lng }},'{{ p.name|e }}')"
+        style="padding:9px 10px;border-radius:8px;border:1px solid var(--border-color);margin-bottom:7px;cursor:pointer;transition:border-color .15s;background:var(--surface-bg);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1rem;">{% if p.region == 'Danube' %}🏞️{% else %}⚓{% endif %}</span>
+          <div>
+            <div style="font-size:.83rem;font-weight:600;color:var(--text-primary);">{{ p.name }}</div>
+            <div style="font-size:.72rem;color:var(--text-secondary);">{{ p.name_en }} · {{ p.region or '—' }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<style>
+.port-filter{padding:6px 14px;border-radius:20px;border:1px solid var(--border-color);background:var(--surface-card);color:var(--text-secondary);cursor:pointer;font-size:.78rem;font-weight:600;transition:all .15s;}
+.port-filter.active,.port-filter:hover{background:rgba(96,165,250,.15);border-color:rgba(96,165,250,.4);color:#60A5FA;}
+.port-list-item:hover{border-color:rgba(167,139,250,.4)!important;}
+.leaflet-popup-content-wrapper{background:rgba(15,23,42,.95)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:10px!important;color:#e2e8f0!important;}
+.leaflet-popup-tip{background:rgba(15,23,42,.95)!important;}
+.leaflet-popup-content{margin:12px 16px!important;}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  const map=L.map('ports-map',{center:[43.0,27.0],zoom:7});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+
+  const markersMap={};
+  const allMarkers=L.layerGroup().addTo(map);
+
+  function portIcon(region){
+    const color=region==='Danube'?'#818CF8':'#A78BFA';
+    return L.divIcon({
+      className:'',
+      html:`<div style="width:16px;height:16px;border-radius:3px;background:${color};border:2px solid rgba(255,255,255,.6);box-shadow:0 0 10px ${color}99;transform:rotate(45deg);"></div>`,
+      iconSize:[16,16],iconAnchor:[8,8],popupAnchor:[0,-12],
+    });
+  }
+
+  fetch('{{ url_for("maps.api_ports") }}').then(r=>r.json()).then(fc=>{
+    fc.features.forEach(f=>{
+      const p=f.properties;
+      const [lng,lat]=f.geometry.coordinates;
+      const m=L.marker([lat,lng],{icon:portIcon(p.region)});
+      m.bindPopup(`
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:8px;">⚓ ${p.name}</div>
+        <div style="font-size:.78rem;color:#94a3b8;margin-bottom:3px;"><strong style="color:#cbd5e1;min-width:64px;display:inline-block;">English</strong>${p.name_en||'—'}</div>
+        <div style="font-size:.78rem;color:#94a3b8;margin-bottom:3px;"><strong style="color:#cbd5e1;min-width:64px;display:inline-block;">Region</strong>${p.region}</div>
+        <div style="font-size:.78rem;color:#94a3b8;"><strong style="color:#cbd5e1;min-width:64px;display:inline-block;">Vessels</strong>${p.vessel_count} registered</div>
+      `,{maxWidth:240});
+      m.addTo(allMarkers);
+      markersMap[p.id]={marker:m,region:p.region,lat,lng};
+    });
+  });
+
+  window.focusPort=function(lat,lng,name){
+    map.setView([lat,lng],13,{animate:true});
+    setTimeout(()=>{
+      Object.values(markersMap).forEach(({marker,lat:mlat,lng:mlng})=>{
+        if(Math.abs(mlat-lat)<0.0001&&Math.abs(mlng-lng)<0.0001) marker.openPopup();
+      });
+    },400);
+  };
+
+  window.filterPorts=function(btn,region){
+    document.querySelectorAll('.port-filter').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.port-list-item').forEach(el=>{
+      el.style.display=(region==='all'||el.dataset.region===region)?'block':'none';
+    });
+    allMarkers.clearLayers();
+    Object.values(markersMap).forEach(({marker,region:r})=>{
+      if(region==='all'||r===region) marker.addTo(allMarkers);
+    });
+  };
+
+  setTimeout(()=>map.invalidateSize(),200);
+})();
+</script>
+{% endblock %}

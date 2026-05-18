@@ -1,0 +1,386 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<!-- ══════════════════════════════════════════════════════════
+     FLEET MAP — Module 11
+══════════════════════════════════════════════════════════ -->
+
+<div class="map-page-header">
+  <div class="map-page-title">
+    <h1><i class="bi bi-map me-2"></i>Fleet Map</h1>
+    <p class="map-page-sub">Live vessel positions, inspection heatmap &amp; fishing zones</p>
+  </div>
+  <div class="map-stat-pills">
+    <span class="map-stat-pill vessels"><i class="bi bi-water"></i> {{ vessel_count }} Vessels</span>
+    <span class="map-stat-pill inspections"><i class="bi bi-clipboard2-check"></i> {{ inspection_count }} Inspections</span>
+    <span class="map-stat-pill zones"><i class="bi bi-hexagon"></i> {{ zone_count }} Zones</span>
+    <span class="map-stat-pill ports"><i class="bi bi-anchor"></i> {{ port_count }} Ports</span>
+  </div>
+</div>
+
+<div class="map-wrapper" id="map-wrapper">
+
+  <!-- ── Layer Toggle Panel ── -->
+  <div class="map-layer-panel" id="layer-panel">
+    <div class="layer-panel-title"><i class="bi bi-layers"></i> Layers</div>
+    <label class="layer-toggle vessels-toggle">
+      <input type="checkbox" id="toggle-vessels" checked>
+      <span class="layer-toggle-dot" style="background:#60A5FA;"></span>
+      <span>Vessels</span>
+    </label>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-heat" checked>
+      <span class="layer-toggle-dot" style="background:#F97316;"></span>
+      <span>Inspection Heat</span>
+    </label>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-zones" checked>
+      <span class="layer-toggle-dot" style="background:#22C55E;"></span>
+      <span>Fishing Zones</span>
+    </label>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-ports">
+      <span class="layer-toggle-dot" style="background:#A78BFA;"></span>
+      <span>Ports</span>
+    </label>
+    <div class="layer-divider"></div>
+    <a href="{{ url_for('maps.zones_map') }}" class="layer-link"><i class="bi bi-hexagon"></i> Zone Viewer</a>
+    <a href="{{ url_for('maps.ports_map') }}" class="layer-link"><i class="bi bi-anchor"></i> Port Directory</a>
+    <a href="{{ url_for('maps.distance_calc') }}" class="layer-link"><i class="bi bi-rulers"></i> Distance Calc</a>
+    {% if current_user.role == 'administrator' %}
+    <a href="{{ url_for('maps.zone_manage') }}" class="layer-link admin"><i class="bi bi-pencil-square"></i> Manage Zones</a>
+    {% endif %}
+  </div>
+
+  <!-- ── The Map ── -->
+  <div id="fleet-map"></div>
+
+  <!-- ── Loading overlay ── -->
+  <div class="map-loading" id="map-loading">
+    <div class="map-loading-spinner"></div>
+    <span>Loading map data…</span>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<!-- Leaflet MarkerCluster CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+<style>
+/* ── Map page layout ── */
+.map-page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+}
+.map-page-title h1 { font-size: 1.5rem; font-weight: 700; margin: 0; color: var(--text-primary); }
+.map-page-sub { font-size: 0.82rem; color: var(--text-secondary); margin: 2px 0 0; }
+.map-stat-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.map-stat-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 13px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+}
+.map-stat-pill.vessels    { background: rgba(96,165,250,.12); color:#60A5FA; border:1px solid rgba(96,165,250,.25);}
+.map-stat-pill.inspections{ background: rgba(249,115,22,.12);  color:#F97316; border:1px solid rgba(249,115,22,.25);}
+.map-stat-pill.zones      { background: rgba(34,197,94,.12);   color:#22C55E; border:1px solid rgba(34,197,94,.25);}
+.map-stat-pill.ports      { background: rgba(167,139,250,.12); color:#A78BFA; border:1px solid rgba(167,139,250,.25);}
+
+/* ── Map wrapper ── */
+.map-wrapper {
+  position: relative; border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+}
+#fleet-map { width: 100%; height: calc(100vh - 230px); min-height: 500px; }
+
+/* ── Layer panel ── */
+.map-layer-panel {
+  position: absolute; top: 14px; right: 14px; z-index: 1000;
+  background: rgba(15,23,42,0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 14px 16px;
+  min-width: 180px; box-shadow: 0 4px 20px rgba(0,0,0,.4);
+}
+.layer-panel-title {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-secondary);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.layer-toggle {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 0; cursor: pointer; font-size: 0.82rem; color: var(--text-primary);
+  user-select: none;
+}
+.layer-toggle input { display: none; }
+.layer-toggle-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  transition: opacity .2s;
+}
+.layer-toggle input:not(:checked) ~ .layer-toggle-dot { opacity: .25; }
+.layer-toggle input:not(:checked) ~ span { opacity: .5; }
+.layer-divider { border-top: 1px solid rgba(255,255,255,.08); margin: 10px 0; }
+.layer-link {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  text-decoration: none; padding: 3px 0; transition: color .15s;
+}
+.layer-link:hover { color: var(--text-primary); }
+.layer-link.admin { color: #F59E0B; }
+.layer-link.admin:hover { color: #FCD34D; }
+
+/* ── Loading overlay ── */
+.map-loading {
+  position: absolute; inset: 0; z-index: 900;
+  background: rgba(10,14,26,.7); backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; color: var(--text-secondary); font-size: 0.9rem;
+  transition: opacity .3s;
+}
+.map-loading.hidden { opacity: 0; pointer-events: none; }
+.map-loading-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.1);
+  border-top-color: #60A5FA;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Leaflet popup theming ── */
+.leaflet-popup-content-wrapper {
+  background: rgba(15,23,42,0.95) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.5) !important;
+  color: #e2e8f0 !important;
+}
+.leaflet-popup-tip { background: rgba(15,23,42,0.95) !important; }
+.leaflet-popup-content { margin: 14px 18px !important; min-width: 200px; }
+.popup-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; color: #f8fafc; }
+.popup-row { display: flex; gap: 6px; font-size: 0.78rem; margin-bottom: 4px; color: #94a3b8; }
+.popup-row strong { color: #cbd5e1; min-width: 70px; }
+.popup-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 10px; padding: 5px 12px; border-radius: 6px;
+  background: rgba(96,165,250,.15); color: #60A5FA;
+  text-decoration: none; font-size: 0.76rem; font-weight: 600;
+  border: 1px solid rgba(96,165,250,.3); transition: background .15s;
+}
+.popup-link:hover { background: rgba(96,165,250,.25); }
+.popup-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  font-size: 0.7rem; font-weight: 700;
+}
+.badge-active   { background:rgba(34,197,94,.15);  color:#22C55E; }
+.badge-suspended{ background:rgba(249,115,22,.15);  color:#F97316; }
+.badge-scrapped { background:rgba(100,116,139,.15); color:#94A3B8; }
+</style>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- MarkerCluster -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<!-- Leaflet.heat -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+(function () {
+  // ── Initialise map centred on Bulgarian Black Sea ──────────────
+  const map = L.map('fleet-map', {
+    center: [42.9, 27.9],
+    zoom: 8,
+    zoomControl: true,
+  });
+
+  // Dark basemap
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    subdomains: 'abcd', maxZoom: 19,
+  }).addTo(map);
+
+  // ── Layer groups ───────────────────────────────────────────────
+  const vesselCluster = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 50,
+    iconCreateFunction: function(cluster) {
+      return L.divIcon({
+        html: `<div class="vessel-cluster">${cluster.getChildCount()}</div>`,
+        className: '', iconSize: [40, 40],
+      });
+    }
+  });
+
+  let heatLayer   = null;
+  const zoneLayer = L.layerGroup();
+  const portLayer = L.layerGroup();
+
+  // ── Custom icons ───────────────────────────────────────────────
+  function vesselIcon(status) {
+    const colors = { Active:'#22C55E', Suspended:'#F97316', Scrapped:'#64748B' };
+    const c = colors[status] || '#60A5FA';
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width:12px;height:12px;border-radius:50%;
+        background:${c};border:2px solid rgba(255,255,255,.6);
+        box-shadow:0 0 8px ${c}88;"></div>`,
+      iconSize: [12,12], iconAnchor:[6,6], popupAnchor:[0,-8],
+    });
+  }
+
+  function portIcon() {
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width:14px;height:14px;border-radius:3px;
+        background:#A78BFA;border:2px solid rgba(255,255,255,.5);
+        box-shadow:0 0 8px #A78BFA88;transform:rotate(45deg);"></div>`,
+      iconSize:[14,14], iconAnchor:[7,7], popupAnchor:[0,-10],
+    });
+  }
+
+  // ── Load Vessels ───────────────────────────────────────────────
+  function loadVessels() {
+    fetch('{{ url_for("maps.api_vessels") }}')
+      .then(r => r.json())
+      .then(fc => {
+        vesselCluster.clearLayers();
+        fc.features.forEach(f => {
+          const p = f.properties;
+          const [lng, lat] = f.geometry.coordinates;
+          const badgeClass = 'badge-' + p.status.toLowerCase();
+          const marker = L.marker([lat, lng], { icon: vesselIcon(p.status) });
+          marker.bindPopup(`
+            <div class="popup-title">🚢 ${p.name}</div>
+            <div class="popup-row"><strong>Call Sign</strong>${p.call_sign}</div>
+            <div class="popup-row"><strong>Int'l №</strong>${p.int_number}</div>
+            <div class="popup-row"><strong>Port</strong>${p.port}</div>
+            <div class="popup-row"><strong>Owner</strong>${p.owner}</div>
+            <div class="popup-row"><strong>Status</strong>
+              <span class="popup-badge ${badgeClass}">${p.status}</span></div>
+            <div class="popup-row"><strong>Permit</strong>${p.permit}</div>
+            <a href="${p.detail_url}" class="popup-link" target="_blank">
+              <i class="bi bi-arrow-up-right-square"></i> Open Record
+            </a>
+          `, { maxWidth: 280 });
+          vesselCluster.addLayer(marker);
+        });
+      });
+  }
+
+  // ── Load Inspection Heat ───────────────────────────────────────
+  function loadInspectionHeat() {
+    fetch('{{ url_for("maps.api_inspections") }}')
+      .then(r => r.json())
+      .then(data => {
+        if (heatLayer) map.removeLayer(heatLayer);
+        if (data.heat.length === 0) return;
+        heatLayer = L.heatLayer(data.heat, {
+          radius: 28, blur: 22, maxZoom: 13,
+          gradient: { 0.2:'#1E40AF', 0.5:'#F59E0B', 0.8:'#EF4444', 1:'#FF0000' },
+        });
+        if (document.getElementById('toggle-heat').checked) heatLayer.addTo(map);
+      });
+  }
+
+  // ── Load Zones ─────────────────────────────────────────────────
+  function loadZones() {
+    fetch('{{ url_for("maps.api_zones") }}')
+      .then(r => r.json())
+      .then(fc => {
+        zoneLayer.clearLayers();
+        L.geoJSON(fc, {
+          style: f => ({
+            color: f.properties.color,
+            fillColor: f.properties.color,
+            weight: 2, opacity: 0.9, fillOpacity: 0.18,
+          }),
+          onEachFeature: (f, layer) => {
+            const p = f.properties;
+            layer.bindPopup(`
+              <div class="popup-title">🗺️ ${p.name}</div>
+              <div class="popup-row"><strong>Code</strong>${p.zone_code}</div>
+              <div class="popup-row"><strong>Type</strong>${p.zone_type}</div>
+              <div class="popup-row"><strong>Info</strong>${p.description || '—'}</div>
+            `, { maxWidth: 260 });
+            layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.38 }));
+            layer.on('mouseout',  () => layer.setStyle({ fillOpacity: 0.18 }));
+          }
+        }).addTo(zoneLayer);
+      });
+  }
+
+  // ── Load Ports ─────────────────────────────────────────────────
+  function loadPorts() {
+    fetch('{{ url_for("maps.api_ports") }}')
+      .then(r => r.json())
+      .then(fc => {
+        portLayer.clearLayers();
+        fc.features.forEach(f => {
+          const p = f.properties;
+          const [lng, lat] = f.geometry.coordinates;
+          const marker = L.marker([lat, lng], { icon: portIcon() });
+          marker.bindPopup(`
+            <div class="popup-title">⚓ ${p.name}</div>
+            <div class="popup-row"><strong>English</strong>${p.name_en || '—'}</div>
+            <div class="popup-row"><strong>Region</strong>${p.region}</div>
+            <div class="popup-row"><strong>Vessels</strong>${p.vessel_count} registered</div>
+          `, { maxWidth: 240 });
+          portLayer.addLayer(marker);
+        });
+      });
+  }
+
+  // ── Add layers to map ──────────────────────────────────────────
+  map.addLayer(vesselCluster);
+  map.addLayer(zoneLayer);
+
+  // ── Layer toggles ──────────────────────────────────────────────
+  document.getElementById('toggle-vessels').addEventListener('change', e => {
+    e.target.checked ? map.addLayer(vesselCluster) : map.removeLayer(vesselCluster);
+  });
+  document.getElementById('toggle-heat').addEventListener('change', e => {
+    if (!heatLayer) return;
+    e.target.checked ? heatLayer.addTo(map) : map.removeLayer(heatLayer);
+  });
+  document.getElementById('toggle-zones').addEventListener('change', e => {
+    e.target.checked ? map.addLayer(zoneLayer) : map.removeLayer(zoneLayer);
+  });
+  document.getElementById('toggle-ports').addEventListener('change', e => {
+    e.target.checked ? map.addLayer(portLayer) : map.removeLayer(portLayer);
+  });
+
+  // ── Cluster icon style (injected) ─────────────────────────────
+  const clusterStyle = document.createElement('style');
+  clusterStyle.textContent = `
+    .vessel-cluster {
+      width:40px;height:40px;border-radius:50%;
+      background:rgba(96,165,250,.85);
+      border:2px solid rgba(255,255,255,.5);
+      color:#fff;font-weight:700;font-size:13px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 14px rgba(96,165,250,.5);
+    }`;
+  document.head.appendChild(clusterStyle);
+
+  // ── Fetch all data, then hide loader ──────────────────────────
+  const loading = document.getElementById('map-loading');
+  Promise.all([
+    loadVessels(),
+    loadInspectionHeat(),
+    loadZones(),
+    loadPorts(),
+  ]).finally(() => {
+    loading.classList.add('hidden');
+  });
+
+  // Leaflet size fix on CSS transition
+  setTimeout(() => map.invalidateSize(), 300);
+})();
+</script>
+{% endblock %}

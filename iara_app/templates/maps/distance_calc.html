@@ -1,0 +1,209 @@
+{% extends "layout/base.html" %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <div>
+    <h1 style="font-size:1.4rem;font-weight:700;margin:0;color:var(--text-primary);"><i class="bi bi-rulers me-2"></i>Distance Calculator</h1>
+    <p style="font-size:.82rem;color:var(--text-secondary);margin:2px 0 0;">Click two points on the map — or enter coordinates manually</p>
+  </div>
+  <a href="{{ url_for('maps.fleet_map') }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--surface-card);border:1px solid var(--border-color);color:var(--text-secondary);text-decoration:none;font-size:.82rem;">
+    <i class="bi bi-arrow-left"></i> Fleet Map
+  </a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;">
+
+  <!-- Map -->
+  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--border-color);box-shadow:0 4px 20px rgba(0,0,0,.2);">
+    <div id="dist-map" style="width:100%;height:560px;"></div>
+  </div>
+
+  <!-- Panel -->
+  <div style="display:flex;flex-direction:column;gap:14px;">
+
+    <!-- Instructions card -->
+    <div style="background:var(--surface-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;">
+      <div style="font-size:.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Instructions</div>
+      <div style="font-size:.82rem;color:var(--text-secondary);line-height:1.7;">
+        <div style="margin-bottom:6px;"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);color:#60A5FA;font-weight:700;font-size:.7rem;text-align:center;line-height:22px;margin-right:6px;">1</span> Click on the map for <strong style="color:#60A5FA;">Point A</strong></div>
+        <div style="margin-bottom:6px;"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:#A78BFA;font-weight:700;font-size:.7rem;text-align:center;line-height:22px;margin-right:6px;">2</span> Click again for <strong style="color:#A78BFA;">Point B</strong></div>
+        <div><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22C55E;font-weight:700;font-size:.7rem;text-align:center;line-height:22px;margin-right:6px;">3</span> Results appear instantly</div>
+      </div>
+      <button onclick="clearPoints()" style="margin-top:12px;width:100%;padding:7px;border-radius:8px;border:1px solid var(--border-color);background:var(--surface-bg);color:var(--text-secondary);cursor:pointer;font-size:.82rem;">
+        <i class="bi bi-arrow-counterclockwise"></i> Reset Points
+      </button>
+    </div>
+
+    <!-- Manual input card -->
+    <div style="background:var(--surface-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;">
+      <div style="font-size:.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Manual Coordinates</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">Point A Lat</label>
+          <input type="number" id="m-lat1" step="0.0001" placeholder="42.5000" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--border-color);background:var(--surface-bg);color:var(--text-primary);font-size:.82rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">Point A Lng</label>
+          <input type="number" id="m-lon1" step="0.0001" placeholder="27.7000" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--border-color);background:var(--surface-bg);color:var(--text-primary);font-size:.82rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">Point B Lat</label>
+          <input type="number" id="m-lat2" step="0.0001" placeholder="43.2000" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--border-color);background:var(--surface-bg);color:var(--text-primary);font-size:.82rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">Point B Lng</label>
+          <input type="number" id="m-lon2" step="0.0001" placeholder="28.5000" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--border-color);background:var(--surface-bg);color:var(--text-primary);font-size:.82rem;box-sizing:border-box;">
+        </div>
+      </div>
+      <button onclick="calcManual()" style="width:100%;padding:8px;border-radius:8px;border:none;cursor:pointer;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;font-size:.85rem;font-weight:600;">
+        <i class="bi bi-calculator"></i> Calculate
+      </button>
+    </div>
+
+    <!-- Results card -->
+    <div id="results-card" style="background:var(--surface-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;display:none;">
+      <div style="font-size:.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;"><i class="bi bi-broadcast"></i> Results</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:#60A5FA;" id="res-km">—</div>
+          <div style="font-size:.72rem;color:var(--text-secondary);margin-top:2px;">Kilometres</div>
+        </div>
+        <div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:#A78BFA;" id="res-nm">—</div>
+          <div style="font-size:.72rem;color:var(--text-secondary);margin-top:2px;">Nautical Miles</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:7px 10px;border-radius:7px;background:var(--surface-bg);">
+          <span style="color:var(--text-secondary);">Bearing</span>
+          <span style="color:var(--text-primary);font-weight:600;" id="res-bearing">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:7px 10px;border-radius:7px;background:var(--surface-bg);">
+          <span style="color:var(--text-secondary);">Midpoint</span>
+          <span style="color:var(--text-primary);font-weight:600;font-size:.75rem;" id="res-mid">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:7px 10px;border-radius:7px;background:var(--surface-bg);">
+          <span style="color:var(--text-secondary);">Point A</span>
+          <span style="color:#60A5FA;font-weight:600;font-size:.75rem;" id="res-a">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:7px 10px;border-radius:7px;background:var(--surface-bg);">
+          <span style="color:var(--text-secondary);">Point B</span>
+          <span style="color:#A78BFA;font-weight:600;font-size:.75rem;" id="res-b">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.leaflet-popup-content-wrapper{background:rgba(15,23,42,.95)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:10px!important;color:#e2e8f0!important;}
+.leaflet-popup-tip{background:rgba(15,23,42,.95)!important;}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  const map=L.map('dist-map',{center:[42.9,27.9],zoom:8});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+
+  let ptA=null,ptB=null,markerA=null,markerB=null,line=null,midMarker=null;
+
+  function iconFor(label,color){
+    return L.divIcon({
+      className:'',
+      html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 0 12px ${color}99;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">${label}</div>`,
+      iconSize:[18,18],iconAnchor:[9,9],popupAnchor:[0,-12],
+    });
+  }
+
+  function midIcon(){
+    return L.divIcon({
+      className:'',
+      html:`<div style="width:10px;height:10px;border-radius:50%;background:#22C55E;border:2px solid #fff;box-shadow:0 0 8px #22C55E99;"></div>`,
+      iconSize:[10,10],iconAnchor:[5,5],
+    });
+  }
+
+  function showResults(data,a,b){
+    document.getElementById('results-card').style.display='block';
+    document.getElementById('res-km').textContent=data.km.toLocaleString()+' km';
+    document.getElementById('res-nm').textContent=data.nm.toLocaleString()+' nm';
+    document.getElementById('res-bearing').textContent=data.bearing+'° '+compassDir(data.bearing);
+    document.getElementById('res-mid').textContent=data.midpoint.lat+', '+data.midpoint.lng;
+    document.getElementById('res-a').textContent=a.lat.toFixed(5)+', '+a.lng.toFixed(5);
+    document.getElementById('res-b').textContent=b.lat.toFixed(5)+', '+b.lng.toFixed(5);
+
+    if(midMarker) map.removeLayer(midMarker);
+    midMarker=L.marker([data.midpoint.lat,data.midpoint.lng],{icon:midIcon()})
+      .bindTooltip('Midpoint',{direction:'top'}).addTo(map);
+  }
+
+  function compassDir(deg){
+    const dirs=['N','NE','E','SE','S','SW','W','NW','N'];
+    return dirs[Math.round(deg/45)];
+  }
+
+  function fetchDistance(){
+    if(!ptA||!ptB)return;
+    fetch(`{{ url_for('maps.api_distance') }}?lat1=${ptA.lat}&lon1=${ptA.lng}&lat2=${ptB.lat}&lon2=${ptB.lng}`)
+      .then(r=>r.json()).then(d=>showResults(d,ptA,ptB));
+  }
+
+  map.on('click',function(e){
+    if(!ptA){
+      ptA=e.latlng;
+      if(markerA)map.removeLayer(markerA);
+      markerA=L.marker([ptA.lat,ptA.lng],{icon:iconFor('A','#60A5FA')})
+        .bindPopup(`<strong>Point A</strong><br>${ptA.lat.toFixed(5)}, ${ptA.lng.toFixed(5)}`)
+        .addTo(map).openPopup();
+    } else if(!ptB){
+      ptB=e.latlng;
+      if(markerB)map.removeLayer(markerB);
+      markerB=L.marker([ptB.lat,ptB.lng],{icon:iconFor('B','#A78BFA')})
+        .bindPopup(`<strong>Point B</strong><br>${ptB.lat.toFixed(5)}, ${ptB.lng.toFixed(5)}`)
+        .addTo(map).openPopup();
+      if(line)map.removeLayer(line);
+      line=L.polyline([[ptA.lat,ptA.lng],[ptB.lat,ptB.lng]],{
+        color:'#60A5FA',weight:2,dashArray:'8,6',opacity:.8
+      }).addTo(map);
+      fetchDistance();
+    } else {
+      clearPoints();
+      ptA=e.latlng;
+      markerA=L.marker([ptA.lat,ptA.lng],{icon:iconFor('A','#60A5FA')})
+        .bindPopup(`<strong>Point A</strong><br>${ptA.lat.toFixed(5)}, ${ptA.lng.toFixed(5)}`)
+        .addTo(map).openPopup();
+    }
+  });
+
+  window.clearPoints=function(){
+    [markerA,markerB,line,midMarker].forEach(l=>{if(l)map.removeLayer(l);});
+    ptA=ptB=markerA=markerB=line=midMarker=null;
+    document.getElementById('results-card').style.display='none';
+  };
+
+  window.calcManual=function(){
+    const lat1=parseFloat(document.getElementById('m-lat1').value);
+    const lon1=parseFloat(document.getElementById('m-lon1').value);
+    const lat2=parseFloat(document.getElementById('m-lat2').value);
+    const lon2=parseFloat(document.getElementById('m-lon2').value);
+    if([lat1,lon1,lat2,lon2].some(isNaN)){alert('Please fill all four coordinate fields.');return;}
+    ptA={lat:lat1,lng:lon1};ptB={lat:lat2,lng:lon2};
+    [markerA,markerB,line,midMarker].forEach(l=>{if(l)map.removeLayer(l);});
+    markerA=L.marker([lat1,lon1],{icon:iconFor('A','#60A5FA')}).bindPopup(`<strong>Point A</strong><br>${lat1}, ${lon1}`).addTo(map);
+    markerB=L.marker([lat2,lon2],{icon:iconFor('B','#A78BFA')}).bindPopup(`<strong>Point B</strong><br>${lat2}, ${lon2}`).addTo(map);
+    line=L.polyline([[lat1,lon1],[lat2,lon2]],{color:'#60A5FA',weight:2,dashArray:'8,6',opacity:.8}).addTo(map);
+    map.fitBounds([[lat1,lon1],[lat2,lon2]],{padding:[40,40]});
+    fetchDistance();
+  };
+
+  setTimeout(()=>map.invalidateSize(),200);
+})();
+</script>
+{% endblock %}

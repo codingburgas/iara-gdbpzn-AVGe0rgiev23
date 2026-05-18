@@ -112,6 +112,29 @@
         <i class="bi bi-exclamation-octagon"></i> Violation Codes
       </a>
 
+      <div class="sidebar-section-label" style="margin-top:8px;">Maps</div>
+
+      <a href="{{ url_for('maps.fleet_map') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.fleet_map' %}active{% endif %}">
+        <i class="bi bi-map"></i> Fleet Map
+      </a>
+      <a href="{{ url_for('maps.zones_map') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.zones_map' %}active{% endif %}">
+        <i class="bi bi-hexagon"></i> Fishing Zones
+      </a>
+      <a href="{{ url_for('maps.zone_manage') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.zone_manage' %}active{% endif %}">
+        <i class="bi bi-pencil-square"></i> Manage Zones
+      </a>
+      <a href="{{ url_for('maps.ports_map') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.ports_map' %}active{% endif %}">
+        <i class="bi bi-anchor"></i> Port Directory
+      </a>
+      <a href="{{ url_for('maps.distance_calc') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.distance_calc' %}active{% endif %}">
+        <i class="bi bi-rulers"></i> Distance Calc
+      </a>
+
       <div class="sidebar-section-label" style="margin-top:8px;">System</div>
 
       <a href="{{ url_for('admin.admin_users') }}"
@@ -153,6 +176,22 @@
         class="sidebar-link {% if 'trips' in request.endpoint %}active{% endif %}">
         <i class="bi bi-journal-text"></i> Trip Logbook
       </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">Maps</div>
+
+      <a href="{{ url_for('maps.fleet_map') }}"
+        class="sidebar-link {% if 'maps' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-map"></i> Fleet Map
+      </a>
+      <a href="{{ url_for('maps.ports_map') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.ports_map' %}active{% endif %}">
+        <i class="bi bi-anchor"></i> Port Directory
+      </a>
+      <a href="{{ url_for('maps.distance_calc') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.distance_calc' %}active{% endif %}">
+        <i class="bi bi-rulers"></i> Distance Calc
+      </a>
+
       <a href="{{ url_for('alerts.notification_center') }}"
         class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}">
         <i class="bi bi-bell"></i> Notifications
@@ -179,6 +218,18 @@
         class="sidebar-link {% if request.endpoint == 'trips.start_trip' %}active{% endif %}">
         <i class="bi bi-play-circle"></i> Start New Trip
       </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">Maps</div>
+
+      <a href="{{ url_for('maps.fleet_map') }}"
+        class="sidebar-link {% if 'maps' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-map"></i> Fleet Map
+      </a>
+      <a href="{{ url_for('maps.distance_calc') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.distance_calc' %}active{% endif %}">
+        <i class="bi bi-rulers"></i> Distance Calc
+      </a>
+
       <a href="{{ url_for('alerts.notification_center') }}"
         class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}">
         <i class="bi bi-bell"></i> Notifications
@@ -205,6 +256,18 @@
         class="sidebar-link {% if request.endpoint == 'trips.start_trip' %}active{% endif %}">
         <i class="bi bi-play-circle"></i> Start New Trip
       </a>
+
+      <div class="sidebar-section-label" style="margin-top:8px;">Maps</div>
+
+      <a href="{{ url_for('maps.fleet_map') }}"
+        class="sidebar-link {% if 'maps' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-map"></i> Fleet Map
+      </a>
+      <a href="{{ url_for('maps.distance_calc') }}"
+        class="sidebar-link {% if request.endpoint == 'maps.distance_calc' %}active{% endif %}">
+        <i class="bi bi-rulers"></i> Distance Calc
+      </a>
+
       <a href="{{ url_for('alerts.notification_center') }}"
         class="sidebar-link {% if 'alerts' in request.endpoint %}active{% endif %}">
         <i class="bi bi-bell"></i> Notifications

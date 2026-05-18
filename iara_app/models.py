@@ -685,3 +685,139 @@ class UserAlertPreference(db.Model):
 
     def __repr__(self) -> str:
         return f"<UserAlertPreference user={self.user_id}>"
+
+
+# ============================================================
+# PORT LOCATION  (Module 11 — Interactive Maps)
+# ============================================================
+
+class PortLocation(db.Model):
+    """A named fishing port with geographic coordinates."""
+    __tablename__ = "port_location"
+
+    id         = db.Column(db.Integer, primary_key=True)
+
+    name       = db.Column(db.String(150), nullable=False, unique=True)
+    name_en    = db.Column(db.String(150), nullable=True)
+
+    lat        = db.Column(db.Float, nullable=False)
+    lng        = db.Column(db.Float, nullable=False)
+
+    country    = db.Column(db.String(100), nullable=False, default="Bulgaria")
+    region     = db.Column(db.String(100), nullable=True)   # e.g. "Black Sea", "Danube"
+
+    is_active  = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id":      self.id,
+            "name":    self.name,
+            "name_en": self.name_en,
+            "lat":     self.lat,
+            "lng":     self.lng,
+            "country": self.country,
+            "region":  self.region,
+        }
+
+    def __repr__(self) -> str:
+        return f"<PortLocation {self.name}>"
+
+
+# ============================================================
+# INSPECTION LOCATION  (Module 11 — Interactive Maps)
+# ============================================================
+
+class InspectionLocation(db.Model):
+    """Optional lat/lng snapshot for an Inspection (extends Inspection.location text field)."""
+    __tablename__ = "inspection_location"
+
+    id            = db.Column(db.Integer, primary_key=True)
+    inspection_id = db.Column(
+        db.Integer, db.ForeignKey("inspection.id"),
+        nullable=False, unique=True
+    )
+
+    lat         = db.Column(db.Float, nullable=False)
+    lng         = db.Column(db.Float, nullable=False)
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    inspection = db.relationship(
+        "Inspection",
+        backref=db.backref("geo_location", uselist=False)
+    )
+
+    def to_dict(self):
+        return {
+            "id":            self.id,
+            "inspection_id": self.inspection_id,
+            "lat":           self.lat,
+            "lng":           self.lng,
+        }
+
+    def __repr__(self) -> str:
+        return f"<InspectionLocation insp={self.inspection_id} ({self.lat},{self.lng})>"
+
+
+# ============================================================
+# FISHING ZONE  (Module 11 — Interactive Maps)
+# ============================================================
+
+ZONE_TYPES = [
+    ("commercial",  "Commercial"),
+    ("protected",   "Protected"),
+    ("restricted",  "Restricted"),
+    ("closed",      "Closed Season"),
+]
+
+ZONE_COLORS = {
+    "commercial": "#3B82F6",   # blue
+    "protected":  "#22C55E",   # green
+    "restricted": "#F59E0B",   # amber
+    "closed":     "#EF4444",   # red
+}
+
+
+class FishingZone(db.Model):
+    """A geographic fishing zone stored as a GeoJSON Polygon/MultiPolygon string."""
+    __tablename__ = "fishing_zone"
+
+    id           = db.Column(db.Integer, primary_key=True)
+
+    name         = db.Column(db.String(150), nullable=False)
+    zone_code    = db.Column(db.String(30),  nullable=False, unique=True)
+    description  = db.Column(db.Text,        nullable=True)
+
+    # GeoJSON geometry stored as raw JSON string
+    geojson      = db.Column(db.Text,        nullable=False)
+
+    # Display
+    color        = db.Column(db.String(20),  nullable=False, default="#3B82F6")
+    zone_type    = db.Column(db.String(50),  nullable=False, default="commercial")
+
+    is_active    = db.Column(db.Boolean,     nullable=False, default=True)
+
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at    = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+
+    def to_feature(self):
+        """Return a GeoJSON Feature dict for use in a FeatureCollection."""
+        import json
+        return {
+            "type": "Feature",
+            "geometry": json.loads(self.geojson),
+            "properties": {
+                "id":          self.id,
+                "name":        self.name,
+                "zone_code":   self.zone_code,
+                "description": self.description or "",
+                "zone_type":   self.zone_type,
+                "color":       self.color,
+            }
+        }
+
+    def __repr__(self) -> str:
+        return f"<FishingZone {self.zone_code} ({self.zone_type})>"

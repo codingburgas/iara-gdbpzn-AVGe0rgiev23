@@ -13,6 +13,7 @@ from .public import bp as public_bp
 from .lookup import bp as lookup_bp
 from .trips import bp as trips_bp
 from .alerts import bp as alerts_bp
+from .maps import bp as maps_bp
 
 
 def register_blueprints(app):
@@ -25,3 +26,4 @@ def register_blueprints(app):
     app.register_blueprint(lookup_bp)
     app.register_blueprint(trips_bp)
     app.register_blueprint(alerts_bp)
+    app.register_blueprint(maps_bp)
